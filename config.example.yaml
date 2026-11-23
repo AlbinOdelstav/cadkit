@@ -1,0 +1,22 @@
+# cadkit settings for THIS computer. Copy to one of:
+#   <plugin folder>/config.yaml      (ignored by git)
+#   ~/.cadkit/config.yaml            (survives plugin updates - recommended)
+# or point the CADKIT_CONFIG environment variable at your own file.
+# Flat `key: value` lines only. Leave a key out to use auto-detection.
+# Relative paths are relative to this file. Check with: node cadkit.mjs config
+
+# Your calibrated tolerance profile (start from profiles/example-p1s-pla.yaml).
+# REQUIRED: validation FAILs without a profile marked `calibrated: true`.
+tolerances: ~/.cadkit/my-printer-pla.yaml
+
+# FreeCAD command-line binary. Auto-detected in the default install folders.
+# freecadcmd: C:/Program Files/FreeCAD 1.1/bin/freecadcmd.exe
+
+# Bambu Studio (only for `cadkit slice`). Auto-detected.
+# bambu_studio: C:/Program Files/Bambu Studio/bambu-studio.exe
+# bambu_presets: <Bambu Studio data folder>/system/BBL
+
+# Optional: an inventory hardware.yaml (rows with category: screw and
+# specs.thread / specs.length), so the validator can tell
+# whether you own the screw lengths a design uses.
+# inventory_hardware: <path to your inventory>/hardware.yaml

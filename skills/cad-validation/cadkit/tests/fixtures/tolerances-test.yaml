@@ -1,0 +1,45 @@
+# Tolerance table used ONLY by tests/run_tests.mjs, so the regression tests
+# give the same result on every machine. Not a real printer's calibration.
+calibrated: true
+printer: test fixture
+materials:
+  PLA:
+    density_g_cm3: 1.24
+    fits:
+      short:          {fail_below: 0.15, warn_below: 0.25, warn_above: 0.55, source: FIXTURE}
+      slide:          {fail_below: 0.30, warn_below: 0.45, warn_above: 0.80, source: FIXTURE, note: "test fixture"}
+      pocket:         {fail_below: 0.25, warn_below: 0.40, warn_above: 1.00, source: FIXTURE}
+      press:          {fail_below: 0.00, warn_below: 0.05, warn_above: 0.20, source: FIXTURE}
+      rotate:         {fail_below: 0.10, warn_below: 0.15, warn_above: 0.40, source: FIXTURE}
+      print_in_place: {fail_below: 0.35, warn_below: 0.45, warn_above: 1.00, source: FIXTURE}
+    holes:
+      clearance:
+        M2: [2.40, 2.75]
+        M3: [3.40, 3.75]
+        M4: [4.50, 4.90]
+        M5: [5.50, 6.00]
+        source: FIXTURE
+      self_tap_pilot:
+        M2: [1.60, 1.90]
+        M3: [2.60, 2.85]
+        M4: [3.50, 3.80]
+        M5: [4.40, 4.75]
+        source: FIXTURE
+      self_tap_pilot_warn_below:
+        M3: 2.70
+      self_tap_min_engagement_x_d: 2.0
+      insert_min_engagement_x_len: 0.6
+      nut_trap_af_extra: [0.20, 0.45]
+      horizontal_hole_extra: 0.0
+      hand_thread_min_d: 3.0
+    printability:
+      min_wall: 0.80
+      warn_wall: 1.20
+      min_gap: 0.40
+      max_ledge: 3.0
+      max_bridge: 35.0
+      warn_bridge: 12.0
+      slender_warn: 10.0
+      slender_fail: 15.0
+      elephant_foot: 0.20
+      source: FIXTURE

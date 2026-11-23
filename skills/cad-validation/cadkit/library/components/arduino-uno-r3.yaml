@@ -1,0 +1,130 @@
+id: arduino-uno-r3
+name: Arduino Uno R3 (and R3-compatible clones)
+inventory_ids: []   # optional: ids of the matching rows in your own inventory
+frame: >
+  Origin = PCB lower-left corner seen from the component side, X along the
+  68.58 mm edge with the USB-B and DC jacks at X = 0, Y along the 53.34 mm
+  edge, Z = 0 at the PCB underside, components on +Z.
+sources:
+  eagle:
+    title: "Arduino UNO R3 official CAD files A000066, board file UNO-TH_Rev3e.brd (downloaded and parsed: outline layer 20, <hole> elements, tPlace outlines, design rules)"
+    url: "https://docs.arduino.cc/static/6bb7a3ca51ebee82a252f60c0b418787/A000066-cad-files.zip"
+    read: 2026-11-23
+  docs:
+    title: "Arduino UNO R3 product documentation (page with the CAD Files link)"
+    url: "https://docs.arduino.cc/hardware/uno-rev3"
+    read: 2026-11-23
+  fritzing:
+    title: "Fritzing forum: Arduino Uno Rev3 top mounted - 'Subtract the number from the USB (11mm)'"
+    url: "https://forum.fritzing.org/t/arduino-uno-rev3-top-mounted/2183"
+    read: 2026-11-23
+notes: >
+  Positions come from the official Rev3e board file. R3-compatible clones
+  usually copy the layout, but not always exactly (mounting holes are the
+  usual suspect), so hole and connector positions carry extra clone
+  uncertainty until measured on your own board.
+
+groups:
+  pcb: {en: "Circuit board", sv: "Kretskort"}
+  holes: {en: "Mounting holes", sv: "Monteringshål"}
+  usb: {en: "USB-B jack", sv: "USB-B-uttag"}
+  dc: {en: "DC power jack", sv: "DC-uttag"}
+  headers: {en: "Pin headers", sv: "Stiftlister"}
+  space: {en: "Room needed", sv: "Utrymme som behövs"}
+  plugs: {en: "Cable plugs", sv: "Kabelkontakter"}
+unit: mm
+dims:
+  pcb_l:    {v: 68.58, src: DRAWING, unc: 0.2, ref: eagle, note: "layer 20 outline", label: {en: "Board length (X)", sv: "Kortets längd (X)"}, group: pcb}
+  pcb_w:    {v: 53.34, src: DRAWING, unc: 0.2, ref: eagle, label: {en: "Board width (Y)", sv: "Kortets bredd (Y)"}, group: pcb}
+  pcb_t:    {v: 1.57,  src: DRAWING, unc: 0.1, ref: eagle, note: "board file design rules: 2 x 0.035 copper + 1.5 core", label: {en: "Board thickness", sv: "Kortets tjocklek"}, group: pcb}
+  hole_d:   {v: 3.20,  src: DRAWING, unc: 0.1, ref: eagle, label: {en: "Mounting hole diameter", sv: "Monteringshålens diameter"}, group: holes}
+  h1_x:     {v: 13.97, src: DRAWING, unc: 0.3, ref: eagle, note: "+clone uncertainty", label: {en: "Hole 1 (front left, by the DC jack): X", sv: "Hål 1 (fram vänster, vid DC-uttaget): X"}, group: holes}
+  h1_y:     {v: 2.54,  src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 1: Y", sv: "Hål 1: Y"}, group: holes}
+  h2_x:     {v: 15.24, src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 2 (back left, by the USB jack): X", sv: "Hål 2 (bak vänster, vid USB-uttaget): X"}, group: holes}
+  h2_y:     {v: 50.80, src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 2: Y", sv: "Hål 2: Y"}, group: holes}
+  h3_x:     {v: 66.04, src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 3 (front right): X", sv: "Hål 3 (fram höger): X"}, group: holes}
+  h3_y:     {v: 7.62,  src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 3: Y", sv: "Hål 3: Y"}, group: holes}
+  h4_x:     {v: 66.04, src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 4 (middle right): X", sv: "Hål 4 (mitten höger): X"}, group: holes}
+  h4_y:     {v: 35.56, src: DRAWING, unc: 0.3, ref: eagle, label: {en: "Hole 4: Y", sv: "Hål 4: Y"}, group: holes}
+  usb_x0:   {v: -6.34, src: DRAWING, unc: 0.4, ref: eagle, note: "tPlace outline of PN61729; overhangs the edge", label: {en: "USB jack starts at X (overhangs the edge)", sv: "USB-uttaget börjar vid X (sticker ut över kanten)"}, group: usb}
+  usb_x1:   {v: 9.41,  src: DRAWING, unc: 0.4, ref: eagle, label: {en: "USB jack ends at X", sv: "USB-uttaget slutar vid X"}, group: usb}
+  usb_y0:   {v: 32.20, src: DRAWING, unc: 0.4, ref: eagle, label: {en: "USB jack starts at Y", sv: "USB-uttaget börjar vid Y"}, group: usb}
+  usb_y1:   {v: 44.00, src: DRAWING, unc: 0.4, ref: eagle, label: {en: "USB jack ends at Y", sv: "USB-uttaget slutar vid Y"}, group: usb}
+  usb_h:    {v: 11.0,  src: COMMUNITY, unc: 0.6, ref: fritzing, note: "height above PCB top; a forum post, not in the board file", label: {en: "USB jack height above the board", sv: "USB-uttagets höjd över kortet"}, group: usb}
+  dc_x0:    {v: -1.80, src: DRAWING, unc: 0.4, ref: eagle, label: {en: "DC jack starts at X (overhangs the edge)", sv: "DC-uttaget börjar vid X (sticker ut över kanten)"}, group: dc}
+  dc_x1:    {v: 11.68, src: DRAWING, unc: 0.4, ref: eagle, label: {en: "DC jack ends at X", sv: "DC-uttaget slutar vid X"}, group: dc}
+  dc_y0:    {v: 3.30,  src: DRAWING, unc: 0.4, ref: eagle, label: {en: "DC jack starts at Y", sv: "DC-uttaget börjar vid Y"}, group: dc}
+  dc_y1:    {v: 12.29, src: DRAWING, unc: 0.4, ref: eagle, label: {en: "DC jack ends at Y", sv: "DC-uttaget slutar vid Y"}, group: dc}
+  dc_h:     {v: 11.0,  src: ASSUMED, unc: 0.8, note: "PJ-102A class jack. Distributor search snippets say 11 mm, but the datasheet (sameskydevices.com) returned 403, so no source was opened", label: {en: "DC jack height above the board", sv: "DC-uttagets höjd över kortet"}, group: dc}
+  hdr_h:    {v: 8.5,   src: DRAWING, unc: 0.3, ref: eagle, note: "part value 8x1F-H8.5", label: {en: "Female header height above the board", sv: "Hylslisternas höjd över kortet"}, group: headers}
+  under:    {v: 2.0,   src: ASSUMED, unc: 0.5, note: "my estimate: trimmed through-hole leads and solder joints, typically 1.5-2 mm. No source", label: {en: "Clearance needed under the board", sv: "Utrymme som behövs under kortet"}, group: space}
+  standoff_free_d: {v: 6.4, src: ASSUMED, unc: 0.3, note: "my estimate: M3 hex standoffs (6.35 across corners) are commonly used on Uno holes. No source", label: {en: "Free area around each hole for a standoff (diameter)", sv: "Fri yta runt varje hål för en distans (diameter)"}, group: space}
+  usb_plug_w:   {v: 16.0, src: ASSUMED, unc: 1.0, note: "my estimate of a USB-B cable overmold; varies per cable. Measure YOUR cable", label: {en: "USB cable plug width", sv: "USB-kontaktens bredd"}, group: plugs}
+  usb_plug_h:   {v: 12.0, src: ASSUMED, unc: 1.0, note: "my estimate; measure your cable", label: {en: "USB cable plug height", sv: "USB-kontaktens höjd"}, group: plugs}
+  usb_plug_len: {v: 30.0, src: ASSUMED, unc: 3.0, note: "my estimate: overmold + bend room before the cable", label: {en: "USB plug + bend room length", sv: "USB-kontakt + böjutrymme, längd"}, group: plugs}
+  dc_plug_d:    {v: 10.0, src: ASSUMED, unc: 1.0, note: "my estimate of a 5.5/2.1 plug overmold; measure your plug", label: {en: "DC plug diameter", sv: "DC-kontaktens diameter"}, group: plugs}
+  dc_plug_len:  {v: 25.0, src: ASSUMED, unc: 3.0, note: "my estimate", label: {en: "DC plug length", sv: "DC-kontaktens längd"}, group: plugs}
+confirm:   # what to measure on YOUR board if a check asks (risk-based: only then)
+  - "hole spacing h1-h3 and h2-h4 (centre to centre)"
+  - "USB-B jack: how far it sticks out past the board edge, and its top above the PCB"
+
+bodies:
+  - name: pcb
+    box: {min: [0, 0, 0], size: [pcb_l, pcb_w, pcb_t]}
+    holes:
+      - {at: [h1_x, h1_y], d: hole_d}
+      - {at: [h2_x, h2_y], d: hole_d}
+      - {at: [h3_x, h3_y], d: hole_d}
+      - {at: [h4_x, h4_y], d: hole_d}
+  - name: usb_b jack
+    box: {min: [usb_x0, usb_y0, pcb_t], size: ["usb_x1 - usb_x0", "usb_y1 - usb_y0", usb_h]}
+  - name: dc jack
+    box: {min: [dc_x0, dc_y0, pcb_t], size: ["dc_x1 - dc_x0", "dc_y1 - dc_y0", dc_h]}
+  - name: headers IOH
+    box: {min: [17.53, 49.53, pcb_t], size: [25.40, 2.54, hdr_h]}
+  - name: headers IOL
+    box: {min: [44.45, 49.53, pcb_t], size: [20.32, 2.54, hdr_h]}
+  - name: headers POWER
+    box: {min: [26.67, 1.27, pcb_t], size: [20.32, 2.54, hdr_h]}
+  - name: headers AD
+    box: {min: [49.53, 1.27, pcb_t], size: [15.24, 2.54, hdr_h]}
+
+keepouts:
+  - name: solder side
+    reason: "pin ends and solder joints under the board; only standoffs may touch it"
+    box: {min: [0, 0, "-under"], size: [pcb_l, pcb_w, under]}
+    # sideways clearance to standoffs is what matters here; the depth (under)
+    # only matters against a floor, which is normally far away
+    unc_from: [standoff_free_d, h1_x, h1_y, h2_x, h2_y, h3_x, h3_y, h4_x, h4_y]
+    holes:
+      - {at: [h1_x, h1_y], d: standoff_free_d}
+      - {at: [h2_x, h2_y], d: standoff_free_d}
+      - {at: [h3_x, h3_y], d: standoff_free_d}
+      - {at: [h4_x, h4_y], d: standoff_free_d}
+connectors:
+  - name: usb_b
+    face: [-1, 0, 0]
+    plug:
+      box:
+        min: ["usb_x0 - usb_plug_len", "(usb_y0 + usb_y1) / 2 - usb_plug_w / 2", "pcb_t + usb_h / 2 - usb_plug_h / 2"]
+        size: [usb_plug_len, usb_plug_w, usb_plug_h]
+      # the plug length only says how far out it reaches; clearance around it
+      # depends on the cross-section and the jack position
+      unc_from: [usb_plug_w, usb_plug_h, usb_y0, usb_y1, usb_h, pcb_t]
+      reason: "USB-B cable plug must go in and out"
+  - name: dc_jack
+    face: [-1, 0, 0]
+    plug:
+      cyl:
+        base: [dc_x0, "(dc_y0 + dc_y1) / 2", "pcb_t + dc_h / 2"]
+        dir: [-1, 0, 0]
+        d: dc_plug_d
+        h: dc_plug_len
+      unc_from: [dc_plug_d, dc_y0, dc_y1, dc_h, pcb_t]
+      reason: "DC barrel plug must go in and out"
+  - name: headers
+    face: [0, 0, 1]
+    plug:
+      box: {min: [17.53, 49.53, "pcb_t + hdr_h"], size: [47.24, 2.54, 14.0]}
+      unc_from: [hdr_h]
+      reason: "Dupont jumper housings plug in from above (14 mm incl. bend)"

@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/cad-validation/cadkit/hooks/filament_reminder.mjs\"", "timeout": 10 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/cad-validation/cadkit/hooks/validation_gate.mjs\"", "timeout": 90 } ] }
+    ]
+  }
+}

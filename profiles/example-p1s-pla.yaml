@@ -1,0 +1,100 @@
+# EXAMPLE tolerance profile: Bambu Lab P1S, 0.4 mm nozzle, PLA.
+#
+# These are generic starting points (source DEFAULT), NOT values from your
+# printer. The validator refuses to run on a profile until it says
+# `calibrated: true`, on purpose: fits that pass on someone else's printer
+# fail on yours.
+#
+# To use it:
+#   1. copy this file OUTSIDE the plugin (e.g. ~/.cadkit/my-p1s-pla.yaml)
+#      and point `tolerances:` in your config.yaml at it
+#   2. print the calibration coupon (node cadkit.mjs coupon) and follow COUPON.md
+#   3. enter your results, mark them `source: CALIBRATION <date>`, and set
+#      calibrated: true
+#
+# Sources:
+#   MEASURED     from a real print on your printer
+#   CALIBRATION  from the calibration coupon
+#   DEFAULT      a common starting point, not checked on your printer
+
+calibrated: false
+printer: Bambu Lab P1S, 0.4 mm nozzle
+materials:
+  PLA:
+    density_g_cm3: 1.24
+    fits:
+      # Gap PER SIDE for a SHORT fit: engagement up to ~5 mm (peg in a plate,
+      # lid tab, locating pin). Bed-side edges also need room for elephant foot.
+      short:
+        fail_below: 0.10
+        warn_below: 0.20
+        warn_above: 0.50
+        source: DEFAULT
+        note: "coupon holes 11-15 measure this"
+      # Gap PER SIDE between printed parts that slide over a LONG stroke
+      # (slider, plunger, lid lip deeper than ~5 mm). Long bores need more.
+      slide:
+        fail_below: 0.25
+        warn_below: 0.40
+        warn_above: 0.80
+        source: DEFAULT
+        note: "measure on a real slider; long strokes bind earlier than short pegs"
+      # Gap PER SIDE around a bought part sitting in a printed pocket or window.
+      pocket:
+        fail_below: 0.20
+        warn_below: 0.35
+        warn_above: 1.00
+        source: DEFAULT
+        note: "allow for cable exits and moulding flash on bought parts"
+      # Gap PER SIDE for parts that must snap or press together (no free play).
+      press:
+        fail_below: 0.00
+        warn_below: 0.05
+        warn_above: 0.20
+        source: DEFAULT
+        note: "starting point only; print a ladder first"
+      # Gap PER SIDE for a shaft turning in a printed bore.
+      rotate:
+        fail_below: 0.10
+        warn_below: 0.15
+        warn_above: 0.40
+        source: DEFAULT
+      # Print-in-place gap (parts printed together that must come apart).
+      print_in_place:
+        fail_below: 0.35
+        warn_below: 0.45
+        warn_above: 1.00
+        source: DEFAULT
+    holes:
+      # Diameter ranges in mm, for VERTICAL holes (axis along Z in the print pose).
+      clearance:        # screw passes freely (coupon holes 1-5)
+        M2: [2.30, 2.70]
+        M3: [3.30, 3.70]
+        M4: [4.40, 4.80]
+        M5: [5.40, 5.90]
+        source: DEFAULT
+      self_tap_pilot:   # machine screw cutting its own thread in PLA (coupon 6-10)
+        M2: [1.60, 1.90]
+        M3: [2.50, 2.85]
+        M4: [3.40, 3.75]
+        M5: [4.30, 4.65]
+        source: DEFAULT
+      # Optional: WARNING (works, but hard to start) below these pilot diameters.
+      # self_tap_pilot_warn_below:
+      #   M3: 2.70
+      self_tap_min_engagement_x_d: 2.0     # thread engagement at least 2 x diameter
+      insert_min_engagement_x_len: 0.6     # screw reaches 60 % into a heat-set insert
+      nut_trap_af_extra: [0.20, 0.45]      # hex pocket across flats = nut AF + this (coupon 16-19)
+      horizontal_hole_extra: 0.20          # added to the minimum for horizontal holes (coupon 25-26)
+      hand_thread_min_d: 3.0               # a string or wire threaded by hand needs at least this
+    printability:
+      min_wall: 0.80          # FAIL below: fewer than 2 extrusion lines (0.4 nozzle)
+      warn_wall: 1.20         # WARNING below: prints, but weak
+      min_gap: 0.40           # gaps narrower than this fuse shut
+      max_ledge: 3.0          # cantilever overhang without support
+      max_bridge: 35.0        # FAIL above
+      warn_bridge: 12.0       # WARNING above (coupon 27 is a 20 mm bridge)
+      slender_warn: 10.0      # free-standing height / min width
+      slender_fail: 15.0      # thin free-standing bars this slender tend to break off mid-print
+      elephant_foot: 0.20     # first layer spreads about this much
+      source: DEFAULT

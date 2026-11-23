@@ -1,0 +1,11 @@
+{
+  "name": "cadkit",
+  "owner": { "name": "cadkit" },
+  "plugins": [
+    {
+      "name": "cadkit",
+      "source": "./",
+      "description": "Automated pre-print validation for FreeCAD + Bambu Lab 3D printing."
+    }
+  ]
+}

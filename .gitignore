@@ -1,0 +1,41 @@
+# --- personal / machine-specific: never commit
+config.yaml
+profiles/local/
+*.local.*
+privacy-patterns.local.txt
+.claude/
+settings.json
+settings.local.json
+**/memory/
+*.jsonl
+.env
+.env.*
+*.pem
+*.key
+
+# --- calibration results are your printer's, keep them out
+**/calibration/RESULTS-*.md
+**/calibration/out/
+
+# --- generated output
+**/out/
+**/validation/
+**/tests/RESULTS.md
+**/tests/HISTORY.md
+**/tests/history.py
+__pycache__/
+*.pyc
+*.stl
+*.3mf
+*.gcode
+*.brep
+*.FCStd
+*.FCBak
+*.zip
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Bambu Studio CLI output
+result.json
+plate_*.gcode

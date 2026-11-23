@@ -1,0 +1,56 @@
+id: tt-motor-dual-shaft
+name: Yellow TT gear motor, dual shaft (3-6 V, robot-car type)
+inventory_ids: []   # optional: ids of the matching rows in your own inventory
+frame: >
+  ENVELOPE model. Origin on the output shaft axis, in the gearbox mid-plane.
+  X along the body with the motor can towards +X, Y across the width,
+  Z along the output shaft (both shafts: +Z and -Z).
+sources:
+  adafruit_page:
+    title: "Adafruit 3777 DC Gearbox Motor - TT Motor (product page: 'Body Dimensions: 70 x 22 x 18mm')"
+    url: "https://www.adafruit.com/product/3777"
+    read: 2026-11-23
+  adafruit_drawing:
+    title: "Adafruit 3777 dimension drawing (image; numbers read off it, which feature each one is was judged by eye)"
+    url: "https://cdn-shop.adafruit.com/product-files/3777/3777_diagram.jpg"
+    read: 2026-11-23
+  print_test:
+    title: "Measured on P1S test prints: a pinion bore of 5.7 / 3.9 is a firm fit; a 22.5 x 18.8 cradle fitted. Not online"
+notes: >
+  TT motors are easy to get wrong from drawings (dual shaft, can width,
+  hole positions). This file is an envelope for placement and
+  clearance only. A cradle or pocket fit around it will WARN until the
+  dimensions below are measured on your motor and put in the manifest under
+  `measured:`.
+groups:
+  body: {en: "Body", sv: "Kropp"}
+  shaft: {en: "Output shaft", sv: "Utgående axel"}
+  space: {en: "Room needed", sv: "Utrymme som behövs"}
+unit: mm
+dims:
+  body_l:       {v: 70.0,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_page, note: "overall incl. motor can", label: {en: "Overall length incl. motor can", sv: "Total längd inkl. motorburk"}, group: body}
+  body_w:       {v: 22.4,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "22.44 on the drawing, 22 on the product page", label: {en: "Width", sv: "Bredd"}, group: body}
+  body_t:       {v: 18.8,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "18.60 on the drawing, 18 on the page; 18.8 is what a test cradle used and it fitted", label: {en: "Thickness (along the shaft)", sv: "Tjocklek (längs axeln)"}, group: body}
+  shaft_from_end: {v: 11.3, src: DISTRIBUTOR, unc: 1.0, ref: adafruit_drawing, note: "11.30 on the drawing; that it is the shaft-to-end distance is a guess", label: {en: "Shaft centre from the gearbox end", sv: "Axelns mitt från växellådans ände"}, group: shaft}
+  shaft_d:      {v: 5.4,   src: DISTRIBUTOR, unc: 0.2, ref: adafruit_drawing, note: "drawing: diameter 5.40", label: {en: "Shaft diameter", sv: "Axelns diameter"}, group: shaft}
+  shaft_flats:  {v: 3.7,   src: DISTRIBUTOR, unc: 0.2, ref: adafruit_drawing, note: "drawing: 3.70", label: {en: "Shaft across the flats", sv: "Axeln över planfasningarna"}, group: shaft}
+  shaft_len:    {v: 9.0,   src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "drawing: 8.70 and 9.30", label: {en: "Shaft length each side", sv: "Axelns längd per sida"}, group: shaft}
+  bore_d:       {v: 5.7,   src: MEASURED, unc: 0.05, ref: print_test, note: "printed bore that grips the shaft", label: {en: "Printed bore that grips (diameter)", sv: "Utskrivet hål som greppar (diameter)"}, group: shaft}
+  bore_flats:   {v: 3.9,   src: MEASURED, unc: 0.05, ref: print_test, label: {en: "Printed bore across the flats", sv: "Utskrivet hål över planfasningarna"}, group: shaft}
+  wire_room:    {v: 6.0,   src: ASSUMED, unc: 2.0, note: "my estimate: solder tabs + wire bend. No source", label: {en: "Room for wires at the can end", sv: "Utrymme för kablar vid motorburken"}, group: space}
+confirm:
+  - "gearbox end to output shaft centre"
+  - "body width and thickness at the gearbox AND at the motor can"
+  - "mounting hole positions if you screw it down"
+bodies:
+  - name: body envelope
+    box: {min: ["-shaft_from_end", "-body_w / 2", "-body_t / 2"], size: [body_l, body_w, body_t]}
+  - name: shaft +Z
+    cyl: {base: [0, 0, "body_t / 2"], dir: [0, 0, 1], d: shaft_d, h: shaft_len}
+  - name: shaft -Z
+    cyl: {base: [0, 0, "-body_t / 2"], dir: [0, 0, -1], d: shaft_d, h: shaft_len}
+keepouts:
+  - name: motor wires
+    reason: "solder tabs and the wire bend at the can end"
+    box: {min: ["body_l - shaft_from_end", "-body_w / 2", "-body_t / 2"], size: [wire_room, body_w, body_t]}
+connectors: []

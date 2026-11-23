@@ -1,0 +1,57 @@
+id: sg90-servo
+name: SG90 9 g micro servo (TowerPro type)
+inventory_ids: []   # optional: ids of the matching rows in your own inventory
+frame: >
+  ENVELOPE model. Origin at the body bottom centre, X along the length with
+  the output shaft towards -X, Y across, Z up to the shaft side.
+sources:
+  retailer:
+    title: "Retailer SG90 datasheet (PDF opened, but the dimension drawing is not machine-readable; numbers were taken from a search snippet with no labels)"
+    read: 2026-11-23
+  tokyo:
+    title: "SG90 datasheet copy, U-Tokyo (PDF opened, drawing not machine-readable)"
+    url: "https://www.brain.rcast.u-tokyo.ac.jp/aad/wp-content/uploads/2024/12/SG90_a.pdf"
+    read: 2026-11-23
+  print_test:
+    title: "Measured on a P1S test print of a servo bracket (+0.6 per side, 6 x 3 cable notch fitted). Not online"
+notes: >
+  Makers differ in body height and ear position. Pocket fits around it WARN
+  until measured. The cable leaves the body at the bottom of the end away from
+  the shaft and needs a notch (a bracket without one was too tight).
+groups:
+  body: {en: "Body", sv: "Kropp"}
+  ears: {en: "Mounting ears", sv: "Fästöron"}
+  shaft: {en: "Output", sv: "Utgång"}
+  space: {en: "Room needed", sv: "Utrymme som behövs"}
+unit: mm
+dims:
+  body_l:     {v: 22.8, src: ASSUMED, unc: 0.5, ref: retailer, note: "number from a search snippet of the retailer sheet; which feature it is was guessed", label: {en: "Body length", sv: "Kroppens längd"}, group: body}
+  body_w:     {v: 12.4, src: ASSUMED, unc: 0.5, ref: retailer, note: "as body_l", label: {en: "Body width", sv: "Kroppens bredd"}, group: body}
+  body_h:     {v: 22.7, src: ASSUMED, unc: 1.0, note: "estimate; makers differ", label: {en: "Body height", sv: "Kroppens höjd"}, group: body}
+  ear_span:   {v: 32.0, src: ASSUMED, unc: 0.5, ref: retailer, note: "snippet number, mapping guessed", label: {en: "Ear tip to tip", sv: "Öronen, spets till spets"}, group: ears}
+  ear_t:      {v: 2.5,  src: ASSUMED, unc: 0.5, note: "estimate", label: {en: "Ear thickness", sv: "Öronens tjocklek"}, group: ears}
+  ear_z:      {v: 15.6, src: ASSUMED, unc: 0.8, ref: retailer, note: "snippet number, mapping guessed", label: {en: "Ear underside above the body bottom", sv: "Öronens undersida över kroppens botten"}, group: ears}
+  hole_span:  {v: 26.7, src: ASSUMED, unc: 0.5, ref: retailer, note: "snippet number, mapping guessed", label: {en: "Ear hole spacing", sv: "Avstånd mellan öronhålen"}, group: ears}
+  hole_d:     {v: 2.0,  src: ASSUMED, unc: 0.3, note: "estimate", label: {en: "Ear hole diameter", sv: "Öronhålens diameter"}, group: ears}
+  shaft_x:    {v: -5.9, src: ASSUMED, unc: 0.8, note: "estimate", label: {en: "Shaft centre from body centre (X)", sv: "Axelns mitt från kroppens mitt (X)"}, group: shaft}
+  top_h:      {v: 4.0,  src: ASSUMED, unc: 1.0, note: "estimate", label: {en: "Shaft boss height above the body", sv: "Axeltappens höjd över kroppen"}, group: shaft}
+  cable_w:    {v: 6.0,  src: MEASURED, unc: 0.5, ref: print_test, label: {en: "Cable exit width", sv: "Kabelutgångens bredd"}, group: space}
+  cable_h:    {v: 3.0,  src: MEASURED, unc: 0.5, ref: print_test, label: {en: "Cable exit height", sv: "Kabelutgångens höjd"}, group: space}
+confirm:
+  - "body height bottom to ear underside (ear_z)"
+  - "ear span and hole spacing"
+bodies:
+  - name: body
+    box: {min: ["-body_l / 2", "-body_w / 2", 0], size: [body_l, body_w, body_h]}
+  - name: ears
+    box: {min: ["-ear_span / 2", "-body_w / 2", ear_z], size: [ear_span, body_w, ear_t]}
+    holes:
+      - {at: ["-hole_span / 2", 0], d: hole_d}
+      - {at: ["hole_span / 2", 0], d: hole_d}
+  - name: shaft boss
+    cyl: {base: [shaft_x, 0, body_h], dir: [0, 0, 1], d: 5.0, h: top_h}
+keepouts:
+  - name: cable bump
+    reason: "cable leaves the end opposite the shaft, at the bottom"
+    box: {min: ["body_l / 2", "-cable_w / 2", 0], size: [cable_h, cable_w, cable_h]}
+connectors: []

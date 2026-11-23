@@ -1,0 +1,65 @@
+# Design manifest - one per version folder (vN/cadkit.yaml). MANDATORY.
+# Every section must be present. A section with nothing in it says `none`.
+# Coordinates: the ASSEMBLY frame of the parts' .brep files, in mm.
+# Full reference with examples: cadkit/README.md and tests/uno_box/out/clean/cadkit.yaml
+
+project: my-project
+version: v1
+material: PLA                 # must exist in your tolerance profile
+printer: Bambu Lab P1S 0.4
+purpose: >
+  One or two sentences: what must this design do?
+sources:                      # build scripts / params the STLs come from (stale-export check)
+  - build.py
+  - params.py
+
+parts:                        # written by lib.export.export_part(...)
+  - name: Base
+    brep: parts/Base.brep     # exact shape, assembled position
+    stl: stl/Base.stl         # mesh in print pose
+    print_rotation: []        # list of [[axis], deg] applied before dropping to z = 0
+
+components:                   # bought parts from library/components/, or: none
+  - id: uno                   # referenced elsewhere as component:uno
+    ref: arduino-uno-r3
+    placement: {pos: [0, 0, 0], rot: []}    # rot: list of [[axis], deg]
+    connectors_used: [usb_b]                # must stay reachable, or: none
+    # measured:                             # calipers on YOUR part override the library
+    #   h3_x: {v: 66.0, unc: 0.05}
+
+contacts:                     # pairs that may touch (zero volume), no clearance warning
+  - [component:uno, Base]
+engaged: []                   # pairs that may OVERLAP on purpose (press fit, keyed joint)
+
+fasteners:                    # every screw, or: none
+  - id: lid-1
+    screw: {thread: M3, length: 10, head: cheese}   # heads: cheese socket button pan flat
+    kind: self-tap            # self-tap | insert | nut | through | standoff
+    origin: [3, 3, 25.5]      # point under the head (where the head sits)
+    dir: [0, 0, -1]           # insertion direction
+    joins: [Lid, Base]        # head side first; for self-tap/insert the LAST one holds the thread
+    installed_before: []      # parts NOT present yet when this screw goes in (driver access)
+
+holes_not_fasteners:          # fastener-sized holes that are not screws (cable, pin, vent)
+  - {part: Base, at: [80, 30, 10], reason: "cable exit"}
+
+fits:                         # gaps that must be right, or: none
+  - name: lid lip in base
+    a: Lid
+    b: Base
+    axis: [0, 0, 1]           # insertion direction; gap is measured in sections normal to it
+    type: slide               # short (<= ~5 mm engagement) | slide (long stroke) | pocket | press | rotate | print_in_place
+
+access:                       # paths that must stay free (cable, finger, tool), or: none
+  - name: sensor cable exit
+    why: "4 mm cable + 1 mm"
+    cyl: {base: [78, 30, 10], dir: [1, 0, 0], d: 5.0, len: 15}
+
+motions: none                 # or a list:
+# - name: lid hinge
+#   part: Lid
+#   type: rotary              # rotary | linear
+#   axis: [1, 0, 0]
+#   origin: [0, 0, 24]        # rotary only
+#   range: [0, 110]           # deg or mm
+#   step: 5
