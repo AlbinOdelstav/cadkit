@@ -1,6 +1,7 @@
 {
   "name": "cadkit",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Automated pre-print validation for FreeCAD designs printed on a Bambu Lab printer: design manifest, geometry/fastener/fit checks against your calibrated tolerances, a print gate, and review, print-settings and BOM skills.",
   "keywords": ["freecad", "3d-printing", "cad", "validation", "bambu"]
 }
