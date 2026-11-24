@@ -173,8 +173,11 @@ def fits(rep, man, solids, unc_of, tol):
             rep.add("fits", lab, NT, "no section cuts both parts - set `at:` depths")
             continue
         g, t = min(gaps)
-        ua, sa, da = unc_of(x["a"], b)
-        ub, sb, db = unc_of(x["b"], a)
+        # `origin:` (a point on the pin/shaft axis) makes a fit into a bought
+        # part's hole use that hole's own uncertainty, not the whole part's.
+        ax = (V(*[float(c) for c in x["origin"]]), u) if x.get("origin") else None
+        ua, sa, da = unc_of(x["a"], b, axis=ax)
+        ub, sb, db = unc_of(x["b"], a, axis=ax)
         unc = max(ua, ub)
         src = sa if ua >= ub else sb
         req = "per side %.2f..%.2f (fail < %.2f), %s" % (lim["warn_below"], lim["warn_above"],

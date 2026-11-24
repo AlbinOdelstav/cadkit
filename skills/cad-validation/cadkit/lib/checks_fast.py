@@ -33,7 +33,7 @@ def screw_solid(o, u, d, L, dk, k):
     return shank.fuse(head)
 
 
-def check_fasteners(rep, man, solids, tol, unc_near):
+def check_fasteners(rep, man, solids, tol, unc_near, hole_at=None):
     """solids: {name: shape} for printed parts and 'component:<id>' bodies.
     unc_near(name, shape) -> (unc, src, dims) of the component bodies near shape."""
     fl = library.fasteners()["threads"]
@@ -168,7 +168,43 @@ def check_fasteners(rep, man, solids, tol, unc_near):
             vals = []
             for a, b in spans:
                 vals += [(t, fv) for t, fv in prof[n] if max(a, 0) <= t <= min(b, L)]
-            if kind == "self-tap" and vals:
+            if kind == "self-tap" and vals and n.startswith("component:"):
+                # Threading into a BOUGHT part: the printed-pilot table does not
+                # apply. Only a hole whose library entry declares `threads:` for
+                # this screw may take it.
+                h = hole_at(n, (o, u)) if hole_at else None
+                spec = (h or {}).get("threads", {}).get(th) if h else None
+                if h is None:
+                    rep.add("fasteners", "thread into %s" % n, FAIL,
+                            "no hole of %s on the screw axis" % n, "a library hole with threads: %s" % th, item=fid)
+                elif not spec:
+                    rep.add("fasteners", "thread into %s" % n, FAIL,
+                            "hole %.2f mm is not declared to take a %s thread" % (h["d"], th),
+                            "library hole with threads: %s" % th, item=fid)
+                else:
+                    weak = spec.get("src") in library.WEAK
+                    st = FAIL if h["d"] >= d else (WARN if weak else PASS)
+                    rep.add("fasteners", "thread into %s" % n, st,
+                            "hole %.2f mm (%s ±%.2f), takes %s per library (%s)" % (
+                                h["d"], h["src"], h["unc"], th, spec.get("src", "?")) +
+                            (" - hole is not smaller than the screw, no bite" if h["d"] >= d else ""),
+                            spec.get("note", ""), item=fid)
+                    ins = [(t, fv) for t, fv in vals if fv >= 0.05]
+                    bite = [t for t, fv in ins if fv <= h["d"] / 2.0 + 0.05]
+                    engl = (max(bite) - min(bite) + STEP) if bite else 0.0
+                    need = float(spec["min_engagement"])
+                    eu, es, ed = spec.get("_unc", (0.0, spec.get("src", ""), []))
+                    if engl < need:
+                        st, msg = FAIL, "%.1f mm" % engl
+                    elif engl - eu < need or es in library.WEAK:
+                        st, msg = WARN, "%.1f mm, but it rests on %s dims ±%.2f" % (engl, es, eu)
+                        if ed:
+                            rep.ask_measure(n.replace("component:", ""), ed[:2], "thread engagement %s" % fid)
+                    else:
+                        st, msg = PASS, "%.1f mm (>= %.1f after ±%.2f)" % (engl, need, eu)
+                    rep.add("fasteners", "thread engagement in %s" % n, st, msg,
+                            ">= %.1f mm (library, %s)" % (need, spec.get("src", "")), item=fid)
+            elif kind == "self-tap" and vals:
                 sol = [t for t, fv in vals if fv < 0.05]
                 ins = [(t, fv) for t, fv in vals if fv >= 0.05]
                 if sol and (not ins or min(sol) < min(t for t, _ in ins)):

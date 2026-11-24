@@ -101,6 +101,20 @@ def run(mpath):
     solids = dict(parts)
     solids.update(comp_solid)
 
+    def hole_at(n, axis):
+        """The library hole of component n that the line axis=(origin, dir)
+        passes through (within 3 mm of its centre), or None."""
+        from lib import geom as G
+        best = None
+        for b in bodies:
+            if b["owner"] != n or b["kind"] != "solid":
+                continue
+            for h in b.get("holes", []):
+                dd = G.line_dist(axis[0], axis[1], h["at"])
+                if best is None or dd < best[0]:
+                    best = (dd, h)
+        return best[1] if best and best[0] < 3.0 else None
+
     def unc_near(n, near=None, within=3.0, axis=None):
         """Uncertainty of the bodies of component n that lie near `near`.
         With axis=(origin, dir): the uncertainty of the component hole that
@@ -109,15 +123,8 @@ def run(mpath):
             return (0.0, "MODEL", [])
         bs = [b for b in bodies if b["owner"] == n and b["kind"] == "solid"]
         if axis is not None:
-            from lib import geom as G
-            best = None
-            for b in bs:
-                for h in b.get("holes", []):
-                    dd = G.line_dist(axis[0], axis[1], h["at"])
-                    if best is None or dd < best[0]:
-                        best = (dd, h)
-            if best and best[0] < 3.0:
-                h = best[1]
+            h = hole_at(n, axis)
+            if h is not None:
                 return (h["unc"], h["src"], h["dims"])
         if near is not None:
             close = []
@@ -135,13 +142,13 @@ def run(mpath):
         dims.sort(key=lambda d: -d.unc)
         return (w["unc"], w["src"], dims)
 
-    def unc_of(n, near=None):
-        return unc_near(n, near)
+    def unc_of(n, near=None, axis=None):
+        return unc_near(n, near, axis=axis)
 
     contacts = man.get("contacts") or []
     screws = {}
     try:
-        screws = checks_fast.check_fasteners(rep, man, solids, tol, unc_near) if man["fasteners"] else {}
+        screws = checks_fast.check_fasteners(rep, man, solids, tol, unc_near, hole_at) if man["fasteners"] else {}
         if not man["fasteners"]:
             rep.add("declared", "fasteners", NT, "manifest declares none")
         checks_fast.undeclared_holes(rep, man, parts)

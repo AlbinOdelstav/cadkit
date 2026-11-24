@@ -166,7 +166,7 @@ class Component(object):
                 z0 = sh.BoundBox.ZMin - 1
                 sh = sh.cut(Part.makeCylinder(d / 2.0, sh.BoundBox.ZLength + 2,
                                               V(at[0], at[1], z0)))
-                hl.append((V(at[0], at[1], 0), u4 + u5))
+                hl.append((V(at[0], at[1], 0), u4 + u5, hole.get("threads") or {}, d))
             make.holes = hl
             return sh, used
 
@@ -179,11 +179,13 @@ class Component(object):
         for spec, kind in bodies:
             sh, used = make(spec)
             holes = []
-            for p, names in getattr(make, "holes", []):
+            for p, names, threads, hdia in getattr(make, "holes", []):
                 q = placement.multVec(p) if placement else p
                 hu, hs, hd = self.worst(names)
+                threads = {k: dict(v, _unc=self.worst([x for x in v.get("unc_from", []) if x in self.dims]))
+                           for k, v in threads.items()}
                 holes.append(dict(at=q, axis=placement.Rotation.multVec(V(0, 0, 1)) if placement else V(0, 0, 1),
-                                  unc=hu, src=hs, dims=hd))
+                                  unc=hu, src=hs, dims=hd, threads=threads, d=hdia))
             make.holes = []
             if placement:
                 sh = sh.copy()

@@ -64,6 +64,39 @@ def thin_features(mesh, axis, at, width, cell=0.1, min_area=0.3):
     return out
 
 
+def local_thickness(shape, axis, at, u, v):
+    """3D wall thickness at a thin region found in a section: from the
+    surface point nearest the region, along the inward surface normal.
+
+    A plane that cuts a pin or round rib near its edge shows a thin chord
+    although the part is thick there; this tells the two apart. Returns
+    None when it cannot tell (the caller then keeps the region)."""
+    from FreeCAD import Vector as V
+    try:
+        c = dict(zip([k for k in "xyz" if k != axis], (u, v)))
+        c[axis] = at
+        p = V(c["x"], c["y"], c["z"])
+        d, pairs, infos = shape.distToShape(Part.Vertex(p))
+        q = pairs[0][0]
+        kind, idx, par = infos[0][0], infos[0][1], infos[0][2]
+        if kind != "Face":
+            return None
+        f = shape.Faces[idx]
+        n = f.normalAt(*par)
+        if n.Length < 1e-9:
+            return None
+        n.normalize()
+        seg = shape.common(Part.LineSegment(q + n * 0.01, q - n * 50).toShape())
+        best = None
+        for e in seg.Edges:
+            dd = e.distToShape(Part.Vertex(q))[0]
+            if dd < 0.05 and (best is None or dd < best[0]):
+                best = (dd, e.Length)
+        return best[1] if best else None
+    except Exception:
+        return None
+
+
 def narrow_gaps(mesh, axis, at, width, cell=0.1, min_area=0.3):
     g, lo = _grid(mesh, axis, at, cell)
     if g is None:
@@ -233,9 +266,13 @@ def check_part(rep, man, part, tol):
             continue
         for at in np.linspace(lo + 0.35, hi - 0.35, 10):
             for a, (u, v) in thin_features(m, ax, at, pr["min_wall"]):
-                worst_fail.append((a, ax, at, u, v))
+                t = local_thickness(pose, ax, at, u, v)
+                if t is None or t < pr["min_wall"] - 0.05:
+                    worst_fail.append((a, ax, at, u, v))
             for a, (u, v) in thin_features(m, ax, at, pr["warn_wall"], min_area=1.0):
-                worst_warn.append((a, ax, at, u, v))
+                t = local_thickness(pose, ax, at, u, v)
+                if t is None or t < pr["warn_wall"] - 0.05:
+                    worst_warn.append((a, ax, at, u, v))
             for a, (u, v) in narrow_gaps(m, ax, at, pr["min_gap"]):
                 gaps.append((a, ax, at, u, v))
 

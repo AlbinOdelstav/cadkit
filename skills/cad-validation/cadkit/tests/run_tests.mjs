@@ -24,6 +24,13 @@ const b = spawnSync(CFG.freecadcmd, [path.join(HERE, 'uno_box', 'build.py')],
   { env: childEnv(CFG, { CADKIT_HOME: KIT }), encoding: 'utf8', maxBuffer: 1 << 26 });
 if (!fs.existsSync(path.join(OUT, 'clean', 'cadkit.yaml'))) { console.error('test design build failed\n' + (b.stderr || '')); process.exit(3); }
 
+// test design 2: TT motor on a retainer plate (screw into a bought part, pin fits into its holes)
+const OUT_TT = path.join(HERE, 'tt_mount', 'out');
+const b2 = spawnSync(CFG.freecadcmd, [path.join(HERE, 'tt_mount', 'build.py')],
+  { env: childEnv(CFG, { CADKIT_HOME: KIT }), encoding: 'utf8', maxBuffer: 1 << 26 });
+if (!fs.existsSync(path.join(OUT_TT, 'clean', 'cadkit.yaml'))) { console.error('TT test design build failed: ' + (b2.stderr || '')); process.exit(3); }
+const vdir = (v) => (v.startsWith('tt/') ? path.join(OUT_TT, v.slice(3)) : path.join(OUT, v));
+
 // variant -> what must be found. check: substring of the check name.
 const EXPECT = {
   clean: { noFail: true, verdict: 'COUPON FIRST', measure: ['h3_x', 'h4_x', 'usb_plug_w', 'dc_plug_d'], why: 'no defect; Uno hole positions are drawing values and cable plug sizes are estimates, so those are asked to be measured' },
@@ -45,6 +52,10 @@ const EXPECT = {
   slender_pin: { find: [['FAIL', 'print', 'slender', 'Base']], why: '1.4 mm pin, 22 mm tall' },
   broken_mesh: { find: [['FAIL', 'mesh', 'watertight', 'Lid']], why: '40 facets removed from the STL' },
   wrong_scale: { find: [['FAIL', 'export', 'STL matches the CAD model', 'Lid']], why: 'STL written in inches' },
+  'tt/clean': { noFail: true, verdict: 'COUPON FIRST', find: [['PASS', 'fasteners', 'thread into component:tt'], ['PASS', 'fasteners', 'thread engagement in component:tt'], ['PASS', 'fits', 'fit pins in gearbox holes'], ['PASS', 'walls', 'walls at least', 'Plate']], why: 'TT motor: M3 threads into the tail (library threads:), 2.0 pins in the 3.0 gearbox holes; only the ASSUMED wire room asks to be looked at' },
+  'tt/pin_tight_vs_unc': { find: [['WARNING', 'fits', 'fit pins in gearbox holes']], measure: ['mh_x'], why: 'pins 2.5: 0.25 per side is less than the ±0.3 hole-position uncertainty' },
+  'tt/pin_too_big': { find: [['FAIL', 'fits', 'fit pins in gearbox holes']], why: 'pins 2.95 in 3.0 holes' },
+  'tt/screw_into_gearbox': { find: [['FAIL', 'fasteners', 'thread into component:tt']], why: 'screw threaded into a gearbox hole the library does not declare as threadable' },
 };
 
 function run(args) {
@@ -68,12 +79,12 @@ async function pool(items, n, fn) {
 
 const variants = Object.keys(EXPECT);
 const t0 = Date.now();
-await pool(variants, 4, (v) => run(['validate', path.join(OUT, v)]));
+await pool(variants, 4, (v) => run(['validate', vdir(v)]));
 const rows = [];
 let misses = 0;
 for (const v of variants) {
   const e = EXPECT[v];
-  const rp = path.join(OUT, v, 'validation', 'report.json');
+  const rp = path.join(vdir(v), 'validation', 'report.json');
   if (!fs.existsSync(rp)) { rows.push([v, e.why, 'NO REPORT', '', '']); misses++; continue; }
   const r = JSON.parse(fs.readFileSync(rp, 'utf8'));
   const fails = r.rows.filter((x) => x.status === 'FAIL');

@@ -2,10 +2,13 @@ id: tt-motor-dual-shaft
 name: Yellow TT gear motor, dual shaft (3-6 V, robot-car type)
 inventory_ids: []   # optional: ids of the matching rows in your own inventory
 frame: >
-  ENVELOPE model. Origin on the output shaft axis, in the gearbox mid-plane.
-  X along the body with the motor can towards +X, Y across the width,
-  Z along the output shaft (both shafts: +Z and -Z).
+  ENVELOPE model with mounting features. Origin on the output shaft axis, in
+  the gearbox mid-plane. X along the body with the motor can towards +X (the
+  gearbox end is at X = -shaft_from_end), Y across the width, Z along the
+  output shaft (both shafts: +Z and -Z). All holes run along Z.
 sources:
+  dim_drawing:
+    title: "Dimensioned drawing of the dual-shaft yellow TT motor (user-supplied, not online). Values marked SCALED were scaled off the same drawing, not dimensioned on it"
   adafruit_page:
     title: "Adafruit 3777 DC Gearbox Motor - TT Motor (product page: 'Body Dimensions: 70 x 22 x 18mm')"
     url: "https://www.adafruit.com/product/3777"
@@ -18,37 +21,72 @@ sources:
     title: "Measured on P1S test prints: a pinion bore of 5.7 / 3.9 is a firm fit; a 22.5 x 18.8 cradle fitted. Not online"
 notes: >
   TT motors are easy to get wrong from drawings (dual shaft, can width,
-  hole positions). This file is an envelope for placement and
-  clearance only. A cradle or pocket fit around it will WARN until the
-  dimensions below are measured on your motor and put in the manifest under
-  `measured:`.
+  hole positions), and clones differ. Main sizes and hole positions come
+  from a dimensioned drawing; tail, peg and collar are scaled off it. The
+  Adafruit numbers (70 x 22.4 x 18.6, shaft 11.3 from the end) describe a
+  slightly different motor and are kept only for the shaft.
+  The tail hole declares which screws may cut their own thread in it
+  (`threads:`); the gearbox through-holes declare none, so a screw threaded
+  into them FAILs.
 groups:
   body: {en: "Body", sv: "Kropp"}
   shaft: {en: "Output shaft", sv: "Utgående axel"}
+  holes: {en: "Mounting holes and tail", sv: "Monteringshål och svans"}
   space: {en: "Room needed", sv: "Utrymme som behövs"}
 unit: mm
 dims:
-  body_l:       {v: 70.0,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_page, note: "overall incl. motor can", label: {en: "Overall length incl. motor can", sv: "Total längd inkl. motorburk"}, group: body}
-  body_w:       {v: 22.4,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "22.44 on the drawing, 22 on the product page", label: {en: "Width", sv: "Bredd"}, group: body}
-  body_t:       {v: 18.8,  src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "18.60 on the drawing, 18 on the page; 18.8 is what a test cradle used and it fitted", label: {en: "Thickness (along the shaft)", sv: "Tjocklek (längs axeln)"}, group: body}
-  shaft_from_end: {v: 11.3, src: DISTRIBUTOR, unc: 1.0, ref: adafruit_drawing, note: "11.30 on the drawing; that it is the shaft-to-end distance is a guess", label: {en: "Shaft centre from the gearbox end", sv: "Axelns mitt från växellådans ände"}, group: shaft}
+  body_l:       {v: 64.2,  src: DRAWING, unc: 0.3, ref: dim_drawing, note: "gearbox end to motor-can end (Adafruit page: 70 overall)", label: {en: "Length, gearbox end to motor end", sv: "Längd, växellådans ände till motorns ände"}, group: body}
+  body_w:       {v: 22.5,  src: DRAWING, unc: 0.3, ref: dim_drawing, note: "gearbox and motor width", label: {en: "Width", sv: "Bredd"}, group: body}
+  body_t:       {v: 18.8,  src: DRAWING, unc: 0.2, ref: dim_drawing, note: "a printed 18.8 cradle fitted (print_test)", label: {en: "Gearbox thickness (along the shaft)", sv: "Växellådans tjocklek (längs axeln)"}, group: body}
+  gearbox_l:    {v: 36.6,  src: SCALED,  unc: 1.0, ref: dim_drawing, note: "informational, not used by any body", label: {en: "Gearbox part length", sv: "Växellådsdelens längd"}, group: body}
+  peg_d:        {v: 4.0,   src: SCALED,  unc: 0.5, ref: dim_drawing, label: {en: "Locating peg diameter", sv: "Styrtappens diameter"}, group: body}
+  peg_h:        {v: 1.7,   src: SCALED,  unc: 0.5, ref: dim_drawing, label: {en: "Locating peg height", sv: "Styrtappens höjd"}, group: body}
+  peg_x:        {v: 11.6,  src: SCALED,  unc: 1.0, ref: dim_drawing, note: "from the shaft towards the motor can", label: {en: "Locating peg from the shaft", sv: "Styrtappen från axeln"}, group: body}
+  peg_face:     {v: 1,     src: ASSUMED, unc: 0.0, note: "+1 = peg on the +Z face, -1 = on the -Z face. Not on the drawing: LOOK at your motor and set it under measured:", label: {en: "Which face the peg is on (+1 / -1)", sv: "Vilken sida tappen sitter på (+1 / -1)"}, group: body}
+  shaft_from_end: {v: 11.2, src: DRAWING, unc: 0.3, ref: dim_drawing, label: {en: "Shaft centre from the gearbox end", sv: "Axelns mitt från växellådans ände"}, group: shaft}
   shaft_d:      {v: 5.4,   src: DISTRIBUTOR, unc: 0.2, ref: adafruit_drawing, note: "drawing: diameter 5.40", label: {en: "Shaft diameter", sv: "Axelns diameter"}, group: shaft}
   shaft_flats:  {v: 3.7,   src: DISTRIBUTOR, unc: 0.2, ref: adafruit_drawing, note: "drawing: 3.70", label: {en: "Shaft across the flats", sv: "Axeln över planfasningarna"}, group: shaft}
-  shaft_len:    {v: 9.0,   src: DISTRIBUTOR, unc: 0.5, ref: adafruit_drawing, note: "drawing: 8.70 and 9.30", label: {en: "Shaft length each side", sv: "Axelns längd per sida"}, group: shaft}
+  shaft_len:    {v: 9.5,   src: DRAWING, unc: 0.3, ref: dim_drawing, note: "each side (Adafruit: 8.7 / 9.3)", label: {en: "Shaft length each side", sv: "Axelns längd per sida"}, group: shaft}
+  collar_d:     {v: 7.2,   src: SCALED,  unc: 0.5, ref: dim_drawing, label: {en: "Shaft collar diameter", sv: "Axelkragens diameter"}, group: shaft}
+  collar_h:     {v: 1.0,   src: SCALED,  unc: 0.5, ref: dim_drawing, label: {en: "Shaft collar height (each face)", sv: "Axelkragens höjd (varje sida)"}, group: shaft}
   bore_d:       {v: 5.7,   src: MEASURED, unc: 0.05, ref: print_test, note: "printed bore that grips the shaft", label: {en: "Printed bore that grips (diameter)", sv: "Utskrivet hål som greppar (diameter)"}, group: shaft}
   bore_flats:   {v: 3.9,   src: MEASURED, unc: 0.05, ref: print_test, label: {en: "Printed bore across the flats", sv: "Utskrivet hål över planfasningarna"}, group: shaft}
+  mh_d:         {v: 3.0,   src: DRAWING, unc: 0.2, ref: dim_drawing, note: "2 through-holes along the shaft direction", label: {en: "Gearbox through-hole diameter", sv: "Växellådans genomgående hål, diameter"}, group: holes}
+  mh_x:         {v: 31.8,  src: DRAWING, unc: 0.3, ref: dim_drawing, note: "+clone uncertainty", label: {en: "Through-holes from the gearbox end", sv: "Genomgående hål från växellådans ände"}, group: holes}
+  mh_y:         {v: 8.75,  src: DRAWING, unc: 0.3, ref: dim_drawing, note: "half of the 17.5 spacing", label: {en: "Through-holes from the centre line (each side)", sv: "Genomgående hål från mittlinjen (per sida)"}, group: holes}
+  tail_len:     {v: 5.0,   src: SCALED,  unc: 1.0, ref: dim_drawing, label: {en: "Tail tab, beyond the gearbox end", sv: "Svansfliken, utanför växellådans ände"}, group: holes}
+  tail_w:       {v: 6.0,   src: SCALED,  unc: 1.0, ref: dim_drawing, label: {en: "Tail tab width", sv: "Svansflikens bredd"}, group: holes}
+  tail_t:       {v: 2.9,   src: MEASURED, unc: 0.4, note: "by eye with a folding rule: about 3, maybe a little less", label: {en: "Tail tab thickness", sv: "Svansflikens tjocklek"}, group: holes}
+  tail_z:       {v: 8.4,   src: SCALED,  unc: 1.2, ref: dim_drawing, note: "tail mid-plane from the -Z gearbox face; 7.2 at most on the drawing", label: {en: "Tail mid-plane from the -Z gearbox face", sv: "Svansens mittplan från växellådans -Z-sida"}, group: holes}
+  tail_hole_d:  {v: 2.8,   src: DRAWING, unc: 0.2, ref: dim_drawing, label: {en: "Tail hole diameter", sv: "Svanshålets diameter"}, group: holes}
+  tail_hole_x:  {v: 2.4,   src: DRAWING, unc: 0.3, ref: dim_drawing, label: {en: "Tail hole beyond the gearbox end", sv: "Svanshålet utanför växellådans ände"}, group: holes}
   wire_room:    {v: 6.0,   src: ASSUMED, unc: 2.0, note: "my estimate: solder tabs + wire bend. No source", label: {en: "Room for wires at the can end", sv: "Utrymme för kablar vid motorburken"}, group: space}
-confirm:
-  - "gearbox end to output shaft centre"
-  - "body width and thickness at the gearbox AND at the motor can"
-  - "mounting hole positions if you screw it down"
+confirm:   # risk-based: only when a check asks
+  - "which gearbox face the small locating peg is on (look, no measuring)"
+  - "tail tab thickness and where it sits across the gearbox thickness"
 bodies:
   - name: body envelope
     box: {min: ["-shaft_from_end", "-body_w / 2", "-body_t / 2"], size: [body_l, body_w, body_t]}
+    holes:
+      - {at: ["mh_x - shaft_from_end", "mh_y"], d: mh_d}
+      - {at: ["mh_x - shaft_from_end", "-mh_y"], d: mh_d}
+  - name: tail tab
+    box: {min: ["-shaft_from_end - tail_len", "-tail_w / 2", "-body_t / 2 + tail_z - tail_t / 2"], size: [tail_len, tail_w, tail_t]}
+    holes:
+      - at: ["-shaft_from_end - tail_hole_x", 0]
+        d: tail_hole_d
+        threads:   # screws that may cut their own thread here; used instead of the printed-pilot table
+          M3: {min_engagement: 2.5, src: MEASURED, unc_from: [tail_t], note: "a DIN 84 M3 threaded into the tail held the motor on a printed cell"}
   - name: shaft +Z
     cyl: {base: [0, 0, "body_t / 2"], dir: [0, 0, 1], d: shaft_d, h: shaft_len}
   - name: shaft -Z
     cyl: {base: [0, 0, "-body_t / 2"], dir: [0, 0, -1], d: shaft_d, h: shaft_len}
+  - name: collar +Z
+    cyl: {base: [0, 0, "body_t / 2"], dir: [0, 0, 1], d: collar_d, h: collar_h}
+  - name: collar -Z
+    cyl: {base: [0, 0, "-body_t / 2 - collar_h"], dir: [0, 0, 1], d: collar_d, h: collar_h}
+  - name: locating peg
+    cyl: {base: [peg_x, 0, "peg_face * body_t / 2 + (peg_face - 1) / 2 * peg_h"], dir: [0, 0, 1], d: peg_d, h: peg_h}
 keepouts:
   - name: motor wires
     reason: "solder tabs and the wire bend at the can end"
