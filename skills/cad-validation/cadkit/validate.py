@@ -20,7 +20,7 @@ import os, sys, time, json, traceback
 _RAN = globals().get("_CADKIT_RAN", False)
 _CADKIT_RAN = True
 
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "1.1.0"
 HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else \
     os.environ.get("CADKIT_HOME", os.getcwd())
 sys.path.insert(0, HERE)
