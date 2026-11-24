@@ -10,6 +10,8 @@ import os, hashlib
 import yaml
 
 REQUIRED_SECTIONS = ("parts", "components", "fasteners", "fits", "access", "motions")
+THIN_OK_MAX_AREA = 5.0      # a declared thin spot is a small local exception, never a thin wall
+THIN_OK_RADIUS = 3.0        # mm from the declared point
 KINDS = ("self-tap", "insert", "nut", "through", "standoff")
 
 
@@ -87,6 +89,25 @@ def load(path):
         for k in ("name", "a", "b", "axis", "type"):
             if k not in x:
                 errs.append("fit %s: missing '%s'" % (x.get("name", "?"), k))
+    tok = m.get("thin_ok") or []
+    if tok == "none":
+        tok = []
+    if not isinstance(tok, list):
+        errs.append("thin_ok must be a list or `none`")
+        tok = []
+    for t in tok:
+        lbl = "thin_ok %s" % t.get("at")
+        if t.get("part") not in names:
+            errs.append("%s: unknown part '%s'" % (lbl, t.get("part")))
+        at = t.get("at")
+        if not (isinstance(at, list) and len(at) == 3 and all(isinstance(c, (int, float)) for c in at)):
+            errs.append("%s: 'at' must be [x, y, z] in the PRINT POSE (as the report prints it)" % lbl)
+        if not str(t.get("reason") or "").strip():
+            errs.append("%s: missing 'reason' (why this thin spot is acceptable)" % lbl)
+        ma = t.get("max_area")
+        if not isinstance(ma, (int, float)) or not 0 < ma <= THIN_OK_MAX_AREA:
+            errs.append("%s: 'max_area' must be a number in (0, %.0f] mm2" % (lbl, THIN_OK_MAX_AREA))
+    m["thin_ok"] = tok
     m["sources"] = [os.path.normpath(os.path.join(base, s)) for s in m.get("sources", [])]
     if not m["sources"]:
         errs.append("missing 'sources' (the build scripts/params the STLs come from)")

@@ -41,7 +41,7 @@ BASE = dict(
     screwed=("h3", "h4"),
     lid_hole_dx=0.0,               # offset of ONE lid hole (+ its screw) from its post
     float_h2=False, driver_arm=False, shelf=False, extra_hole=False, slender_pin=False,
-    mesh_damage=False, stl_scale=None,
+    mesh_damage=False, stl_scale=None, skin=False, thin_ok=None,
 )
 
 VARIANTS = {
@@ -64,6 +64,11 @@ VARIANTS = {
     "slender_pin": {"slender_pin": True},
     "broken_mesh": {"mesh_damage": True},
     "wrong_scale": {"stl_scale": 1 / 25.4},
+    # a 4 x 3 mm pocket leaves a 0.2 mm skin in the -Y wall (like a hole grazing a bridge underside)
+    "thin_skin": {"skin": True},
+    "thin_skin_declared": {"skin": True, "thin_ok": [42.4, 0.1, 14.0]},
+    "thin_skin_wrong_place": {"skin": True, "thin_ok": [42.4, 0.1, 24.0]},
+    "thin_wall_declared": {"t": 0.6, "thin_ok": [42.4, 0.1, 14.0]},
 }
 
 
@@ -122,6 +127,8 @@ def build(P):
     base = base.cut(box(-t - 1, dc_cy - P["dc_w"] / 2, dc_cz - P["dc_w"] / 2, 0.01,
                         dc_cy + P["dc_w"] / 2, H + 1))
     base = base.cut(cyl(P["cable_d"] / 2, t + 2, (Lx - 1, 30.0, 10.0), (1, 0, 0)))
+    if P["skin"]:
+        base = base.cut(box(38, -2.2, 10.5, 42, 0.01, 13.5))
     if P["extra_hole"]:
         base = base.cut(cyl(1.7, fl + 2, (40.0, 30.0, -fl - 1)))
     if P["float_h2"]:
@@ -179,6 +186,8 @@ def manifest(P, name, parts):
         "access": [{"name": "sensor cable exit", "why": "4 mm cable + 1 mm",
                     "cyl": {"base": [P["Lx"] - 5, 30.0, 10.0], "dir": [1, 0, 0], "d": 5.0, "len": 15.0}}],
         "motions": "none",
+        **({"thin_ok": [{"part": "Base", "at": P["thin_ok"], "max_area": 2.0,
+                         "reason": "test: skin left by a pocket, prints as a slit"}]} if P["thin_ok"] else {}),
     }
 
 

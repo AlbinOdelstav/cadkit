@@ -168,6 +168,9 @@ def slender(mesh, step=0.5, cell=0.1, max_extent=12.0):
     return worst
 
 
+from .manifest import THIN_OK_RADIUS
+
+
 def check_part(rep, man, part, tol):
     name = part["name"]
     pr = tol["printability"]
@@ -276,10 +279,42 @@ def check_part(rep, man, part, tol):
             for a, (u, v) in narrow_gaps(m, ax, at, pr["min_gap"]):
                 gaps.append((a, ax, at, u, v))
 
-    def where(t):
+    def xyz(t):
         a, ax, at, u, v = t
         names = [c for c in "xyz" if c != ax]
-        return "%s=%.1f, %s=%.1f %s=%.1f (print pose)" % (ax, at, names[0], u, names[1], v)
+        p = {ax: at, names[0]: u, names[1]: v}
+        return (p["x"], p["y"], p["z"])
+
+    def where(t):
+        return "(%.1f, %.1f, %.1f) print pose, section normal %s" % (xyz(t) + (t[1],))
+
+    # declared thin spots (thin_ok): only within THIN_OK_RADIUS of the point and
+    # no larger than max_area; reported as WARNING, never silent
+    decl = [d for d in (man.get("thin_ok") or []) if d.get("part") == name]
+    used = {}
+
+    def declared(t):
+        p = xyz(t)
+        for i, d in enumerate(decl):
+            dist = sum((a - b) ** 2 for a, b in zip(p, d["at"])) ** 0.5
+            if dist <= THIN_OK_RADIUS and t[0] <= d["max_area"]:
+                used.setdefault(i, []).append(t)
+                return True
+        return False
+
+    worst_fail = [t for t in worst_fail if not declared(t)]
+    worst_warn = [t for t in worst_warn if not declared(t)]
+    for i, d in enumerate(decl):
+        if i in used:
+            w = max(used[i])
+            rep.add("walls", "declared thin spot (thin_ok)", WARN,
+                    "%d thin region(s) here, largest %.1f mm2 (allowed %.1f)" % (len(used[i]), w[0], d["max_area"]),
+                    "declared: %s" % d["reason"], where=where(w), item=name)
+        else:
+            rep.add("walls", "declared thin spot (thin_ok)", WARN,
+                    "nothing thin found near the declared point - stale declaration?",
+                    "remove it or fix 'at'", where="(%.1f, %.1f, %.1f) print pose" % tuple(d["at"]),
+                    item=name)
 
     if worst_fail:
         w = max(worst_fail)

@@ -81,7 +81,7 @@ Node for the launcher, Bambu Studio 2.08 for slicing.
 | geometry | valid B-rep, ONE solid | lumps that touch but are not fused |
 | mesh | one shell, watertight, manifold, outward normals, no self-intersection | broken STLs |
 | print | bed fit, first-layer area, slender free-standing features, self-supporting (ledge/bridge per layer) | parts that topple, thin pins and bars that snap off, hovering features |
-| walls | thinner than 0.8 (FAIL) / 1.2 (WARN), gaps that fuse; 30 sections in X, Y and Z | walls the slicer drops |
+| walls | thinner than 0.8 (FAIL) / 1.2 (WARN), gaps that fuse; 30 sections in X, Y and Z. A small spot you accept on purpose goes under `thin_ok` (within 3 mm, max_area <= 5 mm2, always a WARNING) | walls the slicer drops |
 | fasteners | per screw: reaches every joined part, head room, head bears, clearance hole, pilot size, thread engagement, free to its tip, nut fits, screwdriver reaches, in stock | screws that join nothing, bottom out, bind, cannot be reached |
 | fasteners | fastener-sized holes nobody declared | holes from an old design or a forgotten screw |
 | assembly | every pair of parts, bought parts and screws | clashes nobody thought to test |

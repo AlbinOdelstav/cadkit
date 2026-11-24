@@ -43,6 +43,11 @@ fasteners:                    # every screw, or: none
 holes_not_fasteners:          # fastener-sized holes that are not screws (cable, pin, vent)
   - {part: Base, at: [80, 30, 10], reason: "cable exit"}
 
+thin_ok:                      # optional: a thin spot you accept on purpose (each is a WARNING in the report)
+  # - {part: Base, at: [x, y, z], reason: "screw hole grazes a bridge underside; prints as a slit", max_area: 1.0}
+  # `at` is in the PRINT POSE, as the walls FAIL prints it. Covers only thin regions within
+  # 3 mm of `at` and no larger than max_area (<= 5 mm2); anything else thin still FAILs.
+
 fits:                         # gaps that must be right, or: none
   - name: lid lip in base
     a: Lid
