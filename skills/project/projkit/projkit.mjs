@@ -645,6 +645,12 @@ export function toNeeds(p) {
     if (str(c.status) === 'CANDIDATE') n.note = 'candidate, not decided';
     needs.push(n);
   }
+  // the power source is bought too, but it is not a component
+  const src = p.power && typeof p.power === 'object' && p.power.source;
+  if (src && typeof src === 'object' && str(src.part) && !/^usb\b/i.test(str(src.part))) {
+    const inv = src.inventory && typeof src.inventory === 'object' ? src.inventory : null;
+    needs.push({ name: `power: ${str(src.part)}`, qty: 1, ...(inv && inv.id ? { id: inv.id } : { match: inv && inv.match ? inv.match : { text: str(src.part) } }) });
+  }
   return { name: str(p.title) || p.project, status: str(p.phase) === 'idea' ? 'idea' : 'planning', needs };
 }
 

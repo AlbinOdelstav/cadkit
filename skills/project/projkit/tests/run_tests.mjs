@@ -166,6 +166,14 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('nano esp32: D14 does not exist', has(v('D14', 'd.step'), 'FAIL', /D14 does not exist on arduino-nano-esp32/));
 }
 
+// the power source is something to buy too
+{
+  const { toNeeds } = await import('../projkit.mjs');
+  const n = toNeeds(load(F('fan-good')));
+  t('needs: the power source is a need', n.needs.some((x) => x.name === 'power: 6 V 2 A adapter'));
+  t('needs: a USB supply is not', !toNeeds({ ...load(F('fan-good')), power: { source: { part: 'USB from the PC', v: 5, max_ma: 500 } } }).needs.some((x) => /^power:/.test(x.name)));
+}
+
 // design steps (found in the pilot): they create parts, a print comes after them
 {
   const base = { components: [], plan: [
