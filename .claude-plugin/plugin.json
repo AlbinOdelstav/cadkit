@@ -1,6 +1,6 @@
 {
   "name": "cadkit",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "license": "MIT",
   "description": "From idea to printed, wired and working maker project: a project file (idea, components, pins, power budget, build plan) with checks, /idea, /electronics, /enclosure, /firmware, /plan, /bringup and /log skills, a compile-on-edit hook, plus pre-print validation for FreeCAD designs printed on a Bambu Lab printer (manifest, geometry/fastener/fit checks against your calibrated tolerances, a print gate, review, print-settings and BOM skills).",
   "keywords": [
@@ -14,6 +14,7 @@
     "project-planning",
     "arduino-cli",
     "firmware",
-    "enclosure"
+    "enclosure",
+    "esp32"
   ]
 }
