@@ -18,6 +18,7 @@ Status: it works on one Windows setup (FreeCAD 1.1, Bambu Lab P1S, PLA). See
 |---|---|
 | `idea` | Turns a loose idea into testable requirements, 2-3 concepts with the hard part named, and a `project.yaml` |
 | `electronics` | Picks a part per function (owned first), datasheet currents, power design (drivers, common ground, regulators), pins, and a checked `WIRING.md` with tables and a diagram |
+| `enclosure` | Lays out the box from the parts' real sizes (component library or measured): what goes inside, on the lid or outside, USB reachable, openings, vents, size vs printer; writes `layout.yaml` for the FreeCAD build and the cadkit manifest |
 | `firmware` | Writes the sketch on top of a generated `pins.h`, test sketches per subsystem first, compiles (flash/RAM, lint), uploads and reads the serial monitor, through arduino-cli |
 | `project` | Keeps `project.yaml` current and checks it: pin clashes, pins without PWM/analog/I2C, overloaded 5V/3V3 board pins, power budget, 3.3 V vs 5 V logic, common ground, coils on signal pins, I2C address clashes, phase gates |
 | `plan` | A prioritised build plan: buy (what the inventory lacks), test on a breadboard, print in batches, solder, assemble, flash, with dependencies and "what's next" |
@@ -137,6 +138,7 @@ profile.
 
 ```text
 node skills/cad-validation/cadkit/tests/run_tests.mjs
+node skills/enclosure/encl/tests/run_tests.mjs     # layout: placement, openings, sizes
 node skills/firmware/fwkit/tests/run_tests.mjs      # pins.h, lint, compile (skipped without arduino-cli)
 node skills/project/projkit/tests/run_tests.mjs     # project file: pins, power, wiring rules, gates, plan order
 ```

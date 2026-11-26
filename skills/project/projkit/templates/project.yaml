@@ -63,6 +63,7 @@ components: none              # or a list:
   #                             # solenoid | relay | servo | stepper | driver | module | buzzer | power | passive
   #   datasheet: none           # link to where the power numbers came from
   # optional, by type:  pullup: internal | external (buttons) · resistor_ohm: 220 (LEDs) · i2c_addr: 0x3C
+  # enclosure:  mount: inside | lid | wall | outside | none · access: [usb_b] · exit: +x | -x | +y | -y
 
 pins: none                    # controller pin -> component signal (signal AND power pins), or a list:
   # - {pin: A0, to: moisture.sig}
@@ -84,6 +85,7 @@ power: none                   # or:
 mechanics:
   cad: none                   # folder with the vN/ CAD versions (each has its cadkit.yaml), or none
   material: PLA
+  printer: none               # e.g. Bambu Lab P1S (build volume for the enclosure check); none = from the tolerance profile
   notes: none
 
 firmware:

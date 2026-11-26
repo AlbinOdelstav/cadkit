@@ -35,6 +35,11 @@ try {
     const ok = compile(P);
     t('compile: passes, reports flash and RAM', ok.ok && ok.usage.flash && ok.usage.ram && ok.usage.flash.max > 0);
     t('status: current after compile', status(P).ok);
+    const ph = path.join(P.sketch, 'pins.h');
+    fs.writeFileSync(ph, fs.readFileSync(ph, 'utf8').replace(/\r?\n/g, '\r\n'));
+    fs.writeFileSync(INO, orig.replace(/\r?\n/g, '\r\n'));
+    t('status: a CRLF checkout is not an edit', status(P).ok);
+    fs.writeFileSync(INO, orig);
     fs.writeFileSync(INO, orig.replace('was = now;', 'was = now'));
     t('status: stale after an edit', !status(P).current);
     const bad = compile(P);

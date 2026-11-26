@@ -77,7 +77,8 @@ export function pinsHeader(P) {
 function writePins(P) {
   fs.mkdirSync(P.sketch, { recursive: true });
   const f = path.join(P.sketch, 'pins.h'), txt = pinsHeader(P);
-  const old = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
+  // compare without line endings: a git checkout on Windows turns LF into CRLF
+  const old = fs.existsSync(f) ? fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n') : null;
   if (old !== txt) fs.writeFileSync(f, txt);
   return { file: f, changed: old !== txt };
 }
@@ -98,7 +99,7 @@ function sources(dir) {
 function stamp(P) {
   const h = createHash('sha256');
   h.update(P.fqbn);
-  for (const f of sources(P.sketch)) { h.update(path.relative(P.sketch, f)); h.update(fs.readFileSync(f)); }
+  for (const f of sources(P.sketch)) { h.update(path.relative(P.sketch, f)); h.update(fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')); }
   return h.digest('hex').slice(0, 16);
 }
 const reportFile = (P) => path.join(P.sketch, '.fwkit', 'report.json');
@@ -157,7 +158,7 @@ export function status(P) {
   const f = reportFile(P);
   if (!fs.existsSync(f)) return { current: false, ok: false, why: 'never compiled' };
   const r = JSON.parse(fs.readFileSync(f, 'utf8'));
-  const pinsStale = !fs.existsSync(path.join(P.sketch, 'pins.h')) || fs.readFileSync(path.join(P.sketch, 'pins.h'), 'utf8') !== pinsHeader(P);
+  const pinsStale = !fs.existsSync(path.join(P.sketch, 'pins.h')) || fs.readFileSync(path.join(P.sketch, 'pins.h'), 'utf8').replace(/\r\n/g, '\n') !== pinsHeader(P);
   const cur = r.stamp === stamp(P) && !pinsStale;
   return { current: cur, ok: r.ok && cur, report: r, why: !cur ? (pinsStale ? 'project.yaml pins changed since pins.h was written' : 'sources changed since the last compile') : r.ok ? 'compiled OK' : 'last compile failed' };
 }
