@@ -1,0 +1,63 @@
+schema: 1
+project: fan-bad
+title: Desk fan with display (wrong on purpose)
+phase: electronics
+updated: 2026-11-26
+next_step: Breadboard it
+idea:
+  problem: I want a desk fan that shows the temperature and has a speed button.
+  must: [Fan speed changes with a button press, Shows temperature to 1 degree]
+  nice: []
+  out_of_scope: []
+  constraints: {budget: 300 SEK, power: mains-adapter, size_mm: none, environment: indoor, skill: soldering}
+concepts:
+  - {id: A, summary: DC motor + driver + OLED, difficulty: medium, est_cost: 200 SEK, pros: [], cons: []}
+  - {id: B, summary: PC fan with PWM input, difficulty: easy, est_cost: 150 SEK, pros: [], cons: []}
+chosen: A
+functions:
+  - {id: spin, kind: actuate, what: Move air, by: [motor, driver]}
+  - {id: show, kind: display, what: Show temperature, by: [oled]}
+  - {id: sense, kind: sense, what: Measure temperature, by: [bme]}
+  - {id: speed, kind: input, what: Change speed, by: [btn]}
+  - {id: status, kind: display, what: Show it is on, by: [led]}
+controller: uno
+components:
+  - {id: uno, part: Arduino Uno R3, qty: 1, status: OWNED, type: controller, board: arduino-uno, power: {v: 5, logic_v: 5, ma: 50, src: DATASHEET}}
+  - {id: motor, part: 6 V DC motor, qty: 1, status: DECIDED, type: motor, power: {v: 6, ma: 300, peak_ma: 900, src: DATASHEET}}
+  - {id: driver, part: TB6612FNG module, qty: 1, status: DECIDED, type: driver, needs: [pwm], power: {v: 5, logic_v: 5, ma: 2, src: DATASHEET}}
+  - {id: oled, part: SSD1306 0.96 in I2C (5 V module), qty: 1, status: DECIDED, type: display, needs: [i2c], i2c_addr: 0x3C, power: {v: 5, logic_v: 5, ma: 20, src: DATASHEET}}
+  - {id: bme, part: BME280 bare 3.3 V board, qty: 1, status: DECIDED, type: sensor, needs: [i2c], i2c_addr: 0x3C, power: {v: 3.3, logic_v: 3.3, ma: 1, src: DATASHEET}}
+  - {id: btn, part: 6 mm tactile button, qty: 1, status: OWNED, type: button}
+  - {id: fan2, part: Second little motor, qty: 1, status: DECIDED, type: motor, power: {v: 5, ma: 150, src: ASSUMED}}
+  - {id: led, part: 5 mm green LED, qty: 1, status: OWNED, type: led}
+pins:
+  - {pin: D5, to: driver.pwma}
+  - {pin: D7, to: driver.ain1}
+  - {pin: D8, to: driver.ain2}
+  - {pin: A4, to: oled.sda}
+  - {pin: A5, to: oled.scl}
+  - {pin: A4, to: bme.sda}
+  - {pin: A5, to: bme.scl}
+  - {pin: D2, to: btn.a}
+  - {pin: GND, to: btn.gnd}
+  - {pin: D9, to: led.anode, as: pwm}
+  - {pin: GND, to: led.gnd}
+  - {pin: D10, to: fan2.+}
+  - {pin: GND, to: fan2.-}
+  - {pin: 5V, to: driver.vcc}
+  - {pin: 5V, to: oled.vcc}
+  - {pin: 5V, to: bme.vcc}
+  - {pin: GND, to: driver.gnd}
+  - {pin: GND, to: oled.gnd}
+  - {pin: GND, to: bme.gnd}
+wires:
+  - {from: supply.6v, to: driver.vm}
+  - {from: driver.ao1, to: motor.+}
+  - {from: driver.ao2, to: motor.-}
+power:
+  source: {part: 6 V 2 A adapter, v: 6, max_ma: 2000}
+mechanics: {cad: none, material: PLA, notes: none}
+firmware: {fqbn: arduino:avr:uno, sketch: none}
+plan: none
+open_questions: []
+decisions: []

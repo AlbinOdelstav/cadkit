@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { check, plan, load, normPin } from '../projkit.mjs';
+import { check, plan, load, normPin, wiringDoc } from '../projkit.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const F = (n) => path.join(HERE, 'fixtures', n, 'project.yaml');
@@ -56,6 +56,24 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('next = steps with nothing to wait for', JSON.stringify(r.next) === JSON.stringify(['buy', 'print-chassis', 'print-wheels', 'print-bracket']));
   const r2 = plan(p, null);
   t('without inventory: warn, not fail', r2.results.some((x) => x.level === 'WARNING' && /^mega .*\(inventory not checked\)/.test(x.msg)));
+}
+
+// fan-good / fan-bad: electrical rules
+{
+  const g = check(load(F('fan-good')), F('fan-good'));
+  t('fan-good: no FAIL, no wiring warning', g.ok && !g.results.some((x) => x.area === 'wiring' && x.level !== 'PASS'));
+  t('fan-good: electronics gate open', g.gate && g.gate.open);
+  const b = check(load(F('fan-bad')), F('fan-bad'));
+  t('no common ground', has(b, 'FAIL', /supply's gnd is not connected/));
+  t('3.3 V part on the 5V pin', has(b, 'FAIL', /bme needs 3.3 V but its vcc is on the board's 5V pin/));
+  t('motor on a signal pin', has(b, 'FAIL', /fan2 is a motor on a board signal pin/));
+  t('I2C address clash shown as hex', has(b, 'FAIL', /both use I2C address 0x3C/));
+  t('floating button', has(b, 'WARNING', /btn: button with no pullup/));
+  t('LED without resistor', has(b, 'WARNING', /led: LED with no resistor_ohm/));
+  t('fan-bad: gate closed', b.gate && !b.gate.open);
+  const doc = wiringDoc(load(F('fan-good')));
+  t('wiring doc: table + merged diagram edge', /| pwma | uno D5 |/.test(doc) && /uno ---|"D5→pwma, D7→ain1/.test(doc) && /(2026-11-26)/.test(doc));
+  t('cut-off part name warned', check({ ...load(F('fan-good')), components: [{ id: 'x', part: 'BME280 (5 V', status: 'DECIDED' }] }).results.some((x) => /looks cut off/.test(x.msg)));
 }
 
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
