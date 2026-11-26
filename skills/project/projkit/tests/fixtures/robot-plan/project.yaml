@@ -1,0 +1,46 @@
+schema: 1
+project: robot-plan
+title: Line-following robot (plan test)
+phase: electronics
+updated: 2026-11-26
+next_step: Order the motor driver
+idea:
+  problem: I want a small robot that follows a black tape line on the floor.
+  must: [Follows a 19 mm black tape line, Runs 30 min on one charge]
+  nice: []
+  out_of_scope: []
+  constraints: {budget: 400 SEK, power: battery, size_mm: [150, 120, 80], environment: indoor, skill: soldering}
+concepts:
+  - {id: A, summary: Two TT motors + IR sensor bar, difficulty: medium, est_cost: 250 SEK, pros: [], cons: []}
+  - {id: B, summary: Servos converted to continuous, difficulty: hard, est_cost: 150 SEK, pros: [], cons: []}
+chosen: A
+functions:
+  - {id: drive, kind: actuate, what: Drive and steer, by: [motors, driver]}
+  - {id: see-line, kind: sense, what: See the line, by: [irbar]}
+  - {id: chassis, kind: structure, what: Hold everything, by: []}
+controller: uno
+components:
+  - {id: uno, part: Arduino Uno R3, qty: 1, status: OWNED, board: arduino-uno, inventory: {id: arduino-uno}, power: {v: 5, logic_v: 5, ma: 50, src: DATASHEET}}
+  - {id: mega, part: Arduino Mega 2560, qty: 1, status: DECIDED, inventory: {match: {text: mega}}, power: {ma: 80, src: DATASHEET}}
+  - {id: motors, part: TT gear motor, qty: 2, status: DECIDED, inventory: {match: {text: tt}}, power: {ma: 250, peak_ma: 800, src: DATASHEET}}
+  - {id: driver, part: TB6612FNG motor driver, qty: 1, status: DECIDED, needs: [pwm], power: {ma: 2, logic_v: 5, src: DATASHEET}}
+  - {id: irbar, part: 5-channel IR line sensor, qty: 1, status: DECIDED, needs: [analog], power: {ma: 40, logic_v: 5, src: ASSUMED}}
+pins:
+  - {pin: D5, to: driver.pwma}
+  - {pin: D6, to: driver.pwmb}
+  - {pin: A0, to: irbar.s1}
+power:
+  source: {part: 2x 18650 + buck to 5 V 3 A, v: 5, max_ma: 3000}
+mechanics: {cad: none, material: PLA, notes: none}
+firmware: {fqbn: arduino:avr:uno, sketch: none}
+plan:
+  - {id: buy, kind: buy, what: Order driver and sensor bar, parts: [driver, irbar], after: []}
+  - {id: print-chassis, kind: print, what: Print the chassis plate, parts: [chassis], after: []}
+  - {id: print-wheels, kind: print, what: Print the wheels, parts: [wheels], after: []}
+  - {id: print-bracket, kind: print, what: Print motor brackets, parts: [bracket], after: []}
+  - {id: solder-driver, kind: solder, what: Solder headers on the driver, parts: [driver], after: [buy]}
+  - {id: assemble, kind: assemble, what: Mount motors on the chassis, parts: [chassis, motors, bracket], after: [print-chassis]}
+  - {id: loop-a, kind: test, what: Loop A, parts: [], after: [loop-b]}
+  - {id: loop-b, kind: test, what: Loop B, parts: [], after: [loop-a]}
+open_questions: []
+decisions: []

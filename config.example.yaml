@@ -20,3 +20,11 @@ tolerances: ~/.cadkit/my-printer-pla.yaml
 # specs.thread / specs.length), so the validator can tell
 # whether you own the screw lengths a design uses.
 # inventory_hardware: <path to your inventory>/hardware.yaml
+
+# Optional: the inventory tool's CLI (its inv.mjs), so `projkit plan` can tell
+# which components you already own and which need a buy step.
+# inventory_cli: <path to your inventory>/inv.mjs
+
+# Optional: the folder where your projects live (one subfolder with a
+# project.yaml per project). /idea creates new projects here.
+# projects: ~/Documents/maker-projects

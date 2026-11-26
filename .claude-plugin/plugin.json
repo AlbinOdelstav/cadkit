@@ -1,7 +1,16 @@
 {
   "name": "cadkit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "license": "MIT",
-  "description": "Automated pre-print validation for FreeCAD designs printed on a Bambu Lab printer: design manifest, geometry/fastener/fit checks against your calibrated tolerances, a print gate, and review, print-settings and BOM skills.",
-  "keywords": ["freecad", "3d-printing", "cad", "validation", "bambu"]
+  "description": "From idea to printed, wired and working maker project: a project file (idea, components, pins, power budget, build plan) with checks, /idea and /plan skills, plus pre-print validation for FreeCAD designs printed on a Bambu Lab printer (manifest, geometry/fastener/fit checks against your calibrated tolerances, a print gate, review, print-settings and BOM skills).",
+  "keywords": [
+    "freecad",
+    "3d-printing",
+    "cad",
+    "validation",
+    "bambu",
+    "arduino",
+    "maker",
+    "project-planning"
+  ]
 }

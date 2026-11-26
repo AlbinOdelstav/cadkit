@@ -16,6 +16,7 @@ export const ROOT = path.resolve(KIT, '..', '..', '..'); // plugin root: skills/
 const ENV = {
   freecadcmd: 'CADKIT_FREECADCMD', bambu_studio: 'CADKIT_BAMBU', bambu_presets: 'CADKIT_BAMBU_PRESETS',
   tolerances: 'CADKIT_TOLERANCES', inventory_hardware: 'CADKIT_INVENTORY_HARDWARE',
+  inventory_cli: 'CADKIT_INVENTORY_CLI', projects: 'CADKIT_PROJECTS',
 };
 
 export function configFile() {

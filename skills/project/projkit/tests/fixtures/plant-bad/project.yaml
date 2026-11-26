@@ -1,0 +1,43 @@
+schema: 1
+project: plant-bad
+title: Plant watering (bad wiring on purpose)
+phase: cad
+updated: 2026-11-26
+next_step: Fix the wiring
+idea:
+  problem: Plants die when I travel.
+  must: [Waters when soil is dry, Works well]
+  nice: []
+  out_of_scope: []
+  constraints: {budget: 300 SEK, power: usb-5v, size_mm: none, environment: indoor, skill: soldering}
+concepts:
+  - {id: A, summary: Servo tilts a bottle, difficulty: easy, est_cost: 50 SEK, pros: [], cons: []}
+  - {id: B, summary: Pump + relay, difficulty: medium, est_cost: 150 SEK, pros: [], cons: []}
+chosen: B
+functions:
+  - {id: sense-moisture, kind: sense, what: Know when soil is dry, by: [moist]}
+  - {id: pump-water, kind: actuate, what: Move water, by: [pump]}
+  - {id: show, kind: display, what: Show level, by: [oled]}
+  - {id: case, kind: structure, what: Hold it all, by: []}
+controller: nano
+components:
+  - {id: nano, part: Arduino Nano clone, qty: 1, status: OWNED, board: arduino-nano, power: {v: 5, logic_v: 5, ma: 30, src: DATASHEET}}
+  - {id: moist, part: Capacitive soil sensor v1.2, qty: 1, status: DECIDED, needs: [analog], power: {v: 5, logic_v: 5, ma: 5, src: DATASHEET}}
+  - {id: pump, part: 5 V mini pump, qty: 1, status: CANDIDATE, needs: [pwm], power: {v: 5, ma: 300, peak_ma: 600, src: ASSUMED}}
+  - {id: oled, part: SSD1306 0.96 in I2C, qty: 1, status: DECIDED, needs: [i2c], power: {v: 3.3, logic_v: 3.3, ma: 20, src: DATASHEET}}
+pins:
+  - {pin: A6, to: moist.sig}
+  - {pin: 4, to: pump.in}
+  - {pin: D4, to: oled.dc}
+  - {pin: A4, to: oled.sda}
+  - {pin: A5, to: oled.scl}
+  - {pin: 5V, to: pump.vcc}
+  - {pin: 5V, to: moist.vcc}
+  - {pin: D1, to: oled.rst}
+power:
+  source: {part: USB phone charger 1 A, v: 5, max_ma: 1000}
+mechanics: {cad: none, material: PLA, notes: none}
+firmware: {fqbn: none, sketch: none}
+open_questions: [{q: Which tank size?, blocks: cad}]
+decisions: []
+plan: none
