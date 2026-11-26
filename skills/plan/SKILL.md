@@ -26,11 +26,12 @@ The tool: `node <skill dir>/../project/projkit/projkit.mjs`. Step format: the
   the inventory when `inventory_cli` is set in the cadkit config. It lists what is
   MISSING or SHORT. If it says "inventory not checked" and the `inventory` skill is
   installed, use that skill instead. If neither is available, say the stock was not checked.
+  Filament is not a component: add buy steps for materials the stock lacks (TPU, PETG).
 
 ## 2. Build the steps
 
-Each step: `id`, `kind` (buy | print | test | solder | wire | assemble | flash |
-calibrate | measure), `what` (one concrete action), `parts` (component ids and
+Each step: `id`, `kind` (buy | design | print | test | solder | wire | assemble | flash |
+calibrate | measure; a `design` step names the parts it creates, and their print comes after it), `what` (one concrete action), `parts` (component ids and
 printed part names), `after` (what must be done first), `why` when the order
 is not obvious. Derive the order from these rules, in this priority:
 

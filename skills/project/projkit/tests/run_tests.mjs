@@ -144,6 +144,19 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('pilot: ASSUMED currents in one warning line', assumed.results.filter((x) => /ASSUMED/.test(x.msg)).length === 1);
 }
 
+// design steps (found in the pilot): they create parts, a print comes after them
+{
+  const base = { components: [], plan: [
+    { id: 'design-a', kind: 'design', what: 'CAD of a', parts: ['a'], after: [] },
+    { id: 'print-a', kind: 'print', what: 'print a', parts: ['a'], after: ['design-a'] },
+    { id: 'fit-a', kind: 'test', what: 'fit a', parts: ['a'], after: ['print-a'] },
+  ] };
+  const ok = plan(base);
+  t('design: design -> print -> test is a valid order', !ok.results.some((x) => x.level === 'FAIL'));
+  const bad = plan({ ...base, plan: base.plan.map((s) => (s.id === 'print-a' ? { ...s, after: [] } : s)) });
+  t('design: printing before the design is a FAIL', bad.results.some((x) => x.level === 'FAIL' && /print-a prints a before design-a/.test(x.msg)));
+}
+
 // bring-up checklist and project log
 {
   const { bringup, bringupMarkdown } = await import('../bringup.mjs');
@@ -155,6 +168,19 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('bring-up: sensors before the motor, driver and motor together', at(/^bme/) < at(/^driver \+ motor/) && at(/^driver \+ motor/) > at(/^oled/) && at(/^motor:/) === -1);
   const md = bringupMarkdown(load(F('fan-good')), steps);
   t('bring-up: wires, I2C address and the requirement tests', /bme sda → uno A4/.test(md) && /must find 0x76/.test(md) && /Requirement: "Fan speed changes/.test(md) && /- \[ \] /.test(md));
+  // pilot findings: power vs signal by the pin's own name, motor last, steppers, power modules
+  const drvStep = steps.find((s) => /^driver \+ motor/.test(s.title)).items.join('\n');
+  t('bring-up: a dash in a part id does not make a signal a power wire', /Then signals: driver pwma → uno D5/.test(drvStep));
+  t('bring-up: motor wires after the driver, with motor voltage off', /Then, with the motor voltage OFF, the motor: motor \+ → driver ao1/.test(drvStep));
+  t('bring-up: no duplicated advice for driver + motor', (drvStep.match(/Start at low PWM/g) || []).length === 1);
+  const stp = bringup({ ...load(F('fan-good')), components: [
+    ...load(F('fan-good')).components.filter((c) => c.id !== 'motor'),
+    { id: 'motor', part: 'NEMA17 17HS4401', qty: 1, status: 'DECIDED', type: 'motor', power: { v: 12, ma: 300 } },
+    { id: 'buck2', part: 'LM2596', qty: 1, status: 'DECIDED', type: 'power', power: { v: 12, ma: 0 } },
+  ], wires: [...load(F('fan-good')).wires, { from: 'supply.6v', to: 'buck2.in' }] });
+  const stpText = stp.map((s) => s.items.join('\n')).join('\n');
+  t('bring-up: steppers get current limit first and never hot-plug', /current limit .* BEFORE the motor is connected/.test(stpText) && /Never plug or unplug a stepper/.test(stpText) && !/low PWM/.test(stp.find((s) => /^driver/.test(s.title)).items.join()));
+  t('bring-up: a power module is set and measured before its loads', /NOTHING on its output yet: set the output voltage/.test(stpText) && /Power wires first: buck2 in → supply 6v/.test(stpText));
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'projkit-log-'));
   const pf = path.join(tmp, 'project.yaml');
   fs.copyFileSync(F('fan-good'), pf);

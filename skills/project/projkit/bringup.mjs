@@ -10,7 +10,9 @@ const hex = (a) => (typeof a === 'number' ? '0x' + a.toString(16).toUpperCase().
 // lowest risk first: things that only read, then things that show, then things that move
 const RISK = { sensor: 1, input: 1, button: 1, display: 2, led: 2, buzzer: 2, 'led-strip': 3, module: 2, servo: 4, driver: 4, relay: 4, motor: 5, pump: 5, solenoid: 5, stepper: 5, power: 0 };
 
-function expect(c, wiresTo) {
+const isStepper = (c) => str(c.type) === 'stepper' || /nema|stepper|17hs|28byj|tmc22|a4988|drv8825/i.test(str(c.part));
+
+function expect(c, wiresTo, groupStepper = false) {
   const t = str(c.type);
   const addr = list(c.i2c_addr).map(hex);
   const i2c = wiresTo.some((w) => /\b(sda|scl)\b/i.test(w));
@@ -23,14 +25,23 @@ function expect(c, wiresTo) {
   if (t === 'led') lines.push(`LED blinks${c.resistor_ohm ? ` (through ${c.resistor_ohm} Ω)` : ''}. Dark: turned around (the long leg is +).`);
   if (t === 'led-strip') lines.push('Only a few LEDs at low brightness first. 1000 µF across the strip supply, 330 Ω in the data line.');
   if (t === 'servo') lines.push('Sweep slowly 0 → 180 → 0. If the board resets or the servo twitches, its supply sags: it must not run from the board 5V.');
-  if (t === 'driver' || t === 'motor' || t === 'pump' || t === 'solenoid' || t === 'relay') {
+  const stepper = groupStepper || isStepper(c);
+  if (stepper && (t === 'driver' || t === 'stepper' || t === 'motor')) {
+    lines.push('Set the driver current limit (Vref pot, or the current in UART) BEFORE the motor is connected, below the motor\'s rated current.');
+    lines.push('Never plug or unplug a stepper while the driver has motor voltage (VM): the voltage spike kills the driver.');
+    lines.push('Start slow (~200 steps/s) and accelerate; a motor that only hums has a coil pair swapped or too little current.');
+    lines.push('Measure VM while it starts: a drop of more than ~10 % (or a board reset) means the supply or wiring is too weak. After 10 minutes the driver may be warm, not too hot to touch.');
+  } else if (t === 'driver' || t === 'motor' || t === 'pump' || t === 'solenoid' || t === 'relay') {
     lines.push('Start at low PWM (~30 %), both directions if it can reverse. Keep a hand on the plug: it must be possible to cut power at once.');
     lines.push('Measure the supply voltage while it starts: a drop of more than ~10 % (or a board reset) means the supply or wiring is too weak.');
   }
+  if (t === 'power') lines.push('Supply in, NOTHING on its output yet: set the output voltage (trimmer) and measure it. Connect the loads only when it reads right, and measure again under load.');
   if (t === 'pump') lines.push('Pumps only run IN water: a dry run destroys most small pumps.');
   if (!lines.length) lines.push('Test sketch exercises it and prints what happens; compare with its datasheet.');
   return lines;
 }
+
+const byIdType = (comps, id) => str((comps.find((c) => str(c.id) === id) || {}).type);
 
 export function bringup(p) {
   const ctrl = str(p.controller);
@@ -70,16 +81,37 @@ export function bringup(p) {
       conns.some((k) => (k.a.startsWith(c.id + '.') && k.b.startsWith(o.id + '.')) || (k.b.startsWith(c.id + '.') && k.a.startsWith(o.id + '.'))))];
     group.forEach((g) => done.add(g.id));
     const ids = group.map((g) => g.id);
-    const wires = conns.filter((k) => ids.includes(k.a.split('.')[0]) || ids.includes(k.b.split('.')[0]))
-      .map((k) => { const fmt = (e) => (e.startsWith('board.') ? `${ctrl || 'board'} ${normPin(e.slice(6))}` : e.replace('.', ' ')); return `${fmt(k.b)} → ${fmt(k.a)}${k.note ? ` (${k.note})` : ''}`; });
-    const power = wires.filter((w) => /\b(vcc|vdd|vin|vm|5v|3v3|gnd|\+|-)\b/i.test(w));
-    const signal = wires.filter((w) => !power.includes(w));
+    // each connection as "<this part's pin> → <the other end>", sorted into power and signal
+    // by the part's OWN pin name (not the whole text: part ids contain dashes)
+    const fmt = (e) => (e.startsWith('board.') ? `${ctrl || 'board'} ${normPin(e.slice(6))}` : e.replace('.', ' '));
+    const POWER_SIG = /^(vcc|vdd|vin|vm|vmot|vio|5v|3v3|v\+|\+|-|gnd|0v|in|out|vout|\+5v|\+12v)$/i;
+    const rows = conns.filter((k) => ids.includes(k.a.split('.')[0]) || ids.includes(k.b.split('.')[0])).map((k) => {
+      const [me, other] = ids.includes(k.b.split('.')[0]) ? [k.b, k.a] : [k.a, k.b];
+      const meSig = me.split('.')[1] || '';
+      const mePart = byIdType(comps, me.split('.')[0]);
+      const power = POWER_SIG.test(meSig) && (!/^(in|out)$/i.test(meSig) || mePart === 'power');
+      const motorSide = [me, other].some((e) => ['motor', 'stepper', 'pump', 'solenoid'].includes(byIdType(comps, e.split('.')[0])));
+      const toDriver = [me, other].some((e) => byIdType(comps, e.split('.')[0]) === 'driver');
+      return { text: `${fmt(me)} → ${fmt(other)}${k.note ? ` (${k.note})` : ''}`, power, motor: motorSide && toDriver };
+    });
+    const power = rows.filter((r) => r.power && !r.motor).map((r) => r.text);
+    const signal = rows.filter((r) => !r.power && !r.motor).map((r) => r.text);
+    const motorWires = rows.filter((r) => r.motor).map((r) => r.text);
+    // a driver in front of a stepper is a stepper driver, whatever its name says
+    const groupStepper = group.length > 1 && group.some(isStepper);
+    const checks = [...new Set(group.flatMap((g) => expect(g, rows.map((r) => r.text), groupStepper)))];
+    // the motor goes on only after the driver is set up, with its supply off
+    if (motorWires.length) {
+      const at = checks.findIndex((x) => /current limit/.test(x));
+      checks.splice(at >= 0 ? at + 1 : 0, 0, `Then, with the motor voltage OFF, the motor: ${motorWires.join('; ')}.`);
+    }
     step(`${ids.join(' + ')}: ${group.map((g) => str(g.part)).join(' + ')}`, [
       'Power off (USB out) while wiring.',
       ...(power.length ? [`Power wires first: ${power.join('; ')}.`] : []),
-      ...(signal.length ? [`Then signals: ${signal.join('; ')}.`] : ['Not wired in project.yaml yet: wire it there first (/electronics).']),
+      ...(signal.length ? [`Then signals: ${signal.join('; ')}.`] : []),
+      ...(!rows.length ? ['Not wired in project.yaml yet: wire it there first (/electronics).'] : []),
       'Power on; nothing gets hot (touch the chips for 2 s), nothing smells.',
-      ...group.flatMap((g) => expect(g, wires)),
+      ...checks,
     ]);
   }
 

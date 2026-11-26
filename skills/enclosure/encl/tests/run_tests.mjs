@@ -46,5 +46,24 @@ t('printer volumes', bedSize('Bambu Lab A1 mini')[0] === 180 && bedSize('Bambu L
 const nosize = plan({ ...p, components: [...p.components, { id: 'mystery', part: 'Unknown board', status: 'DECIDED' }] });
 t('a part without a size is a FAIL', nosize.results.some((r) => r.level === 'FAIL' && /mystery: no size/.test(r.msg)));
 
+// found in the first pilot (ESP32 + stepper drivers, no library files)
+{
+  const pilot = {
+    ...p, controller: 'esp',
+    components: [
+      { id: 'esp', part: 'ESP32 DevKitC', type: 'controller', dims_mm: { v: [55, 28, 13], src: 'MEASURED' } },
+      { id: 'drv', part: 'TMC2209', type: 'driver', dims_mm: { v: [21, 15, 12], src: 'MEASURED' } },
+      { id: 'mot', part: 'NEMA17', type: 'motor', power: { ma: 600 } },
+      { id: 'r1', part: '1k resistor', type: 'passive' },
+    ],
+    pins: [{ pin: 'GPIO18', to: 'drv.step' }], wires: [{ from: 'drv.coil_a', to: 'mot.coil_a' }],
+  };
+  const P2 = plan(pilot, { printer: 'Bambu Lab P1S' });
+  t('pilot: passive parts are not placed and do not FAIL', !P2.results.some((r) => r.level === 'FAIL') && !P2.parts.some((x) => x.id === 'r1'));
+  t('pilot: a controller without a library file warns that there is no USB opening', P2.results.some((r) => r.level === 'WARNING' && /esp has no library file.*NO USB opening/.test(r.msg)));
+  t('pilot: room for jumpers above a wired module without a library file', P2.parts.find((x) => x.id === 'drv').box.max[2] - P2.parts.find((x) => x.id === 'drv').box.min[2] >= 12 + 14 - 0.05);
+  t('pilot: vents only for parts inside the box', !P2.results.some((r) => /vents needed: .*mot/.test(r.msg)));
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
 process.exit(failed ? 1 : 0);

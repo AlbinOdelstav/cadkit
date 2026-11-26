@@ -35,6 +35,7 @@ export const DEFAULTS = {
   standoff_min: 5.0,                   // floor to the underside of a board with a solder-side keepout
   opening_clear: 1.0,                  // per side around a plug
   cable_d: 6.0,                        // cable exit hole for an outside part
+  jumper_room: 14.0,                   // Dupont housing + bend above a wired module without a library file
 };
 
 // ---------------------------------------------------------------------------
@@ -88,7 +89,7 @@ export function plan(p, opts = {}) {
   for (const c of list(p.components)) {
     const id = str(c.id);
     const mount = id === ctrl ? 'inside' : str(c.mount) || (['motor', 'pump', 'solenoid'].includes(str(c.type)) ? 'outside' : 'inside');
-    if (mount === 'none') continue;
+    if (mount === 'none' || (str(c.type) === 'passive' && !c.mount)) continue; // resistors and caps ride on the wiring
     let env = null, lib = null, src = '';
     if (!isNone(c.cad)) {
       lib = libPart(str(c.cad));
@@ -139,7 +140,9 @@ export function plan(p, opts = {}) {
     if (cx === 0 && !acc.length) cx = D.margin - D.connector_margin;
     // jumper wires / plugs going UP out of a part that is wired (headers) need their room too
     const wired = pinEntries(p).some((e) => str(e.to).split('.')[0] === x.c.id) || x.c.id === ctrl;
-    const upPlug = x.lib && wired ? Math.max(-Infinity, ...x.lib.connectors.filter((k) => k.face[2] === 1 && k.plug).map((k) => k.plug.max[2])) : -Infinity;
+    let upPlug = x.lib && wired ? Math.max(-Infinity, ...x.lib.connectors.filter((k) => k.face[2] === 1 && k.plug).map((k) => k.plug.max[2])) : -Infinity;
+    // a wired module without a library file: assume Dupont jumpers on top unless it is soldered
+    if (!x.lib && wired && x.c.soldered !== true) upPlug = Math.max(upPlug, x.env.max[2] + D.jumper_room);
     const pos = [cx - rb.min[0], cy - rb.min[1], pz];
     const box = { min: [cx, cy, pz + x.env.min[2]], max: [cx + w, cy + h, pz + Math.max(x.env.max[2], upPlug)] };
     placed.push({ ...x, deg, pos, box, under, access: acc });
@@ -192,7 +195,8 @@ export function plan(p, opts = {}) {
   }
 
   // --- heat, printer, sanity
-  const hot = list(p.components).filter((c) => ['driver', 'power'].includes(str(c.type)) || Number(c.power && (c.power.peak_ma ?? c.power.ma)) >= 500);
+  const insideIds = new Set(placed.map((x) => x.c.id));
+  const hot = list(p.components).filter((c) => insideIds.has(c.id) && (['driver', 'power'].includes(str(c.type)) || Number(c.power && (c.power.peak_ma ?? c.power.ma)) >= 500));
   if (hot.length) add('WARNING', `vents needed: ${hot.map((c) => c.id).join(', ')} get warm (driver / regulator / >= 500 mA). Slots near them, low in one wall and high in the opposite`);
   const bed = bedSize(opts.printer || str(p.mechanics && p.mechanics.printer));
   if (!bed) add('NOT TESTED', 'printer build volume unknown (mechanics.printer): size not checked');
@@ -208,6 +212,9 @@ export function plan(p, opts = {}) {
     else add('INFO', `${x.id}: no mounting holes known: a slot, clip rails or a printed cradle (and say which)`);
   }
   if (!placed.length) add('FAIL', 'nothing to put inside');
+  // the board must stay reprogrammable with the lid on
+  if (ctrlPart && !ctrlPart.lib) add('WARNING', `${ctrl} has no library file, so its USB position is unknown and the box gets NO USB opening: add a library file (cad:) or plan the opening by hand from a measurement`);
+  else if (ctrlPart && !placed.find((x) => x.c.id === ctrl).access.length) add('WARNING', `${ctrl}: no connector is reachable from outside (access:). The firmware cannot be updated with the lid on`);
   return { defaults: D, inner: innerSize, outer, parts: placed.map(({ id, c, src, deg, pos, box, under, access: a }) => ({ id, part: str(c.part), ref: str(c.cad) || null, size_from: src, rot_z: deg, pos, box, standoff: under || null, access: a.map((k) => k.name) })), lid: lidParts.map((x) => x.id), outside: outside.map((x) => x.id), openings, results: R };
 }
 

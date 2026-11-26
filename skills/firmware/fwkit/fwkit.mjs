@@ -20,6 +20,8 @@ import { load, resolveFile, normPin, loadBoard, pinEntries } from '../../project
 import { loadConfig } from '../../cad-validation/cadkit/config.mjs';
 
 const SRC_EXT = ['.ino', '.h', '.hpp', '.c', '.cpp'];
+// board packages that are not in arduino-cli's default index: their official index URLs
+const CORE_URLS = { 'esp32:esp32': 'https://espressif.github.io/arduino-esp32/package_esp32_index.json' };
 const isNone = (v) => v === undefined || v === null || v === 'none' || (Array.isArray(v) && v.length === 0);
 const list = (v) => (isNone(v) ? [] : Array.isArray(v) ? v : [v]);
 const str = (v) => (v === undefined || v === null ? '' : String(v).trim());
@@ -136,6 +138,12 @@ export function compile(P) {
   try { j = JSON.parse(r.stdout); } catch { j = { success: false, compiler_err: r.stdout + r.stderr }; }
   res.ok = j.success === true || (j.success === undefined && r.status === 0);
   res.errors = str(j.compiler_err || (res.ok ? '' : r.stderr || j.error));
+  // a missing board package: say exactly how to install it
+  if (!res.ok && /platform not installed|Platform '[^']+' not found/i.test(res.errors + r.stdout + r.stderr)) {
+    const core = P.fqbn.split(':').slice(0, 2).join(':');
+    const url = CORE_URLS[core];
+    issues.push({ level: 'FAIL', msg: `board package ${core} is not installed: ${url ? `arduino-cli core install ${core} --additional-urls ${url}` : `arduino-cli core install ${core}`} (one-time download, several hundred MB for ESP32)` });
+  }
   for (const s of (j.builder_result && j.builder_result.executable_sections_size) || []) {
     res.usage[s.name === 'text' ? 'flash' : s.name === 'data' ? 'ram' : s.name] = { used: s.size, max: s.max_size, pct: s.max_size ? Math.round((100 * s.size) / s.max_size) : null };
   }

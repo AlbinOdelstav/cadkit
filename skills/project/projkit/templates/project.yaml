@@ -99,7 +99,7 @@ firmware:
 # --- 4. Build plan (written by /plan): the order to do things in ---------------
 plan: none                    # or a list of steps; `node projkit.mjs plan .` sorts them and shows what is next
   # - id: buy-parts
-  #   kind: buy                 # buy | print | test | solder | wire | assemble | flash | calibrate | measure
+  #   kind: buy                 # buy | design | print | test | solder | wire | assemble | flash | calibrate | measure
   #   what: Order the pump and the MOSFET module
   #   parts: [pump, mosfet]     # component ids and/or printed part names this step makes available or uses
   #   after: []                 # step ids that must be done first

@@ -30,6 +30,9 @@ Every part that goes **inside** or **on the lid** needs a size:
 - A board with mounting holes or connectors that is **not** in the library:
   add a library file (format: `<skill dir>/../cad-validation/cadkit/README.md`,
   "Adding a component"), with each dimension's source. Then use `cad:`.
+- **The controller especially:** without a library file the USB position is unknown and
+  encl makes no USB opening (it warns). Add the board to the library once it is measured.
+- Resistors and capacitors (`type: passive`) ride on the wiring and are not placed.
 - Otherwise `dims_mm: {v: [l, w, h], src: MEASURED}`: ask the user to measure
   with calipers. A DATASHEET size is fine for a first layout; an ASSUMED one is
   a WARNING that must be measured before the CAD is final.

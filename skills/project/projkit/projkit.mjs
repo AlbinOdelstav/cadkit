@@ -28,7 +28,7 @@ export const PHASES = ['idea', 'electronics', 'cad', 'firmware', 'build', 'done'
 const ALL_PHASES = [...PHASES, 'paused'];
 const SECTIONS = ['project', 'title', 'phase', 'next_step', 'idea', 'concepts', 'chosen', 'functions',
   'controller', 'components', 'pins', 'power', 'mechanics', 'firmware', 'plan', 'open_questions', 'decisions'];
-export const STEP_KINDS = ['buy', 'print', 'test', 'solder', 'wire', 'assemble', 'flash', 'calibrate', 'measure'];
+export const STEP_KINDS = ['buy', 'design', 'print', 'test', 'solder', 'wire', 'assemble', 'flash', 'calibrate', 'measure'];
 const KINDS = ['sense', 'actuate', 'display', 'input', 'control', 'power', 'comms', 'structure'];
 const STATUSES = ['CANDIDATE', 'DECIDED', 'OWNED', 'BOUGHT'];
 const CAPS = ['digital', 'analog', 'pwm', 'interrupt', 'i2c', 'spi', 'uart'];
@@ -546,9 +546,20 @@ export function plan(p, stock = null) {
     if (!providers.has(part)) providers.set(part, []);
     providers.get(part).push(str(s.id));
   }
+  // a design step creates the parts it names: a print of them must come after it
+  const designers = new Map();
+  for (const s of steps) if (str(s.kind) === 'design') for (const part of list(s.parts).map(str)) {
+    if (!designers.has(part)) designers.set(part, []);
+    designers.get(part).push(str(s.id));
+  }
   for (const s of steps) {
     const id = str(s.id), anc = ancestors(id), kind = str(s.kind);
-    if (['buy', 'print'].includes(kind)) continue;
+    if (kind === 'print') {
+      for (const part of list(s.parts).map(str)) for (const d of designers.get(part) || []) {
+        if (!anc.has(d)) add('FAIL', `${id} prints ${part} before ${d} (which designs it): add it to after`);
+      }
+    }
+    if (['buy', 'print', 'design'].includes(kind)) continue;
     for (const part of list(s.parts).map(str)) {
       for (const pr of providers.get(part) || []) {
         if (pr !== id && !anc.has(pr)) add('FAIL', `${id} uses ${part}, but ${pr} (which provides it) is not before it: add it to after`);
@@ -609,7 +620,8 @@ export function recordPurchase(p, componentId, qty = null, cli = loadConfig().in
   const c = list(p.components).find((x) => str(x.id) === componentId);
   if (!c) return { ok: false, msg: `"${componentId}" is not a component id in project.yaml` };
   const n = qty || Number(c.qty) || 1;
-  const invId = c.inventory && c.inventory.id;
+  const inv = invLink(c);
+  const invId = inv && inv.id;
   if (!cli || !fs.existsSync(cli)) return { ok: false, msg: 'inventory not updated: inventory_cli is not set in the cadkit config' };
   if (!invId) return { ok: false, msg: `inventory not updated: ${componentId} has no inventory: {id: ...}. If it is a new item, add it with the inventory skill (or the app), then set inventory: {id: <its id>} and status: BOUGHT` };
   const r = spawnSync(process.execPath, [cli, 'adjust', str(invId), `+${n}`, '--json'], { encoding: 'utf8' });
@@ -618,12 +630,16 @@ export function recordPurchase(p, componentId, qty = null, cli = loadConfig().in
   return { ok: true, msg: `inventory: ${invId} ${j.before ?? '?'} -> ${j.after ?? '?'} ${j.unit || ''}. Set ${componentId} to status: BOUGHT in project.yaml` };
 }
 
+// the component's inventory link as an object, or null (`none`, a string, missing)
+const invLink = (c) => (c && c.inventory && typeof c.inventory === 'object' && !Array.isArray(c.inventory) ? c.inventory : null);
+
 export function toNeeds(p) {
   const needs = [];
   for (const c of list(p.components)) {
     const n = { name: `${c.id}: ${str(c.part) || c.id}`, qty: Number(c.qty) || 1 };
-    if (c.inventory && c.inventory.id) n.id = c.inventory.id;
-    else if (c.inventory && c.inventory.match) n.match = c.inventory.match;
+    const inv = invLink(c);
+    if (inv && inv.id) n.id = inv.id;
+    else if (inv && inv.match && typeof inv.match === 'object') n.match = inv.match;
     else n.match = { text: str(c.part) };
     if (str(c.status) === 'CANDIDATE') n.note = 'candidate, not decided';
     needs.push(n);

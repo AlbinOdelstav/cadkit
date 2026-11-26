@@ -85,6 +85,11 @@ Write `power.source` (part, `v`, `max_ma`) and `power.notes` for the design choi
   Keep D0/D1 (USB serial) free; D13 has the on-board LED.
 - Buttons: `pullup: internal` (button to GND, `INPUT_PULLUP`) unless there is a
   reason not to. LEDs: `resistor_ohm` ((5 V − Vf) ÷ ~10 mA, e.g. 220-330 Ω).
+- One pin to several parts on purpose (a shared enable line, a TMC2209 single-wire UART
+  bus): write `to:` as a list, `{pin: GPIO4, to: [drv1.en, drv2.en]}`. Without the list,
+  two parts on one pin is a clash. Mark a pin that is only read with `as: input`.
+- Several identical parts wired differently (four drivers, four motors) are separate
+  components (`drv-w1` ... `drv-w4`), not one with `qty: 4`: each gets its own pins.
 - Quote names with commas: `part: "BME280 module (5 V, level shifted)"`.
 
 ## 5. Check, document, show
