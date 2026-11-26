@@ -147,7 +147,7 @@ else if (cmd === 'slice') {
 } else if (cmd === 'config') {
   const show = (k) => `${k.padEnd(19)} ${CFG[k] || '(not set)'}`;
   console.log([`config file         ${CFG._file || '(none: using environment and auto-detection)'}`,
-    ...['freecadcmd', 'bambu_studio', 'bambu_presets', 'tolerances', 'inventory_hardware'].map(show)].join('\n'));
+    ...['freecadcmd', 'bambu_studio', 'bambu_presets', 'tolerances', 'inventory_hardware', 'inventory_cli', 'projects'].map(show)].join('\n'));
 } else {
   console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 11).join('\n'));
   code = cmd ? 3 : 0;

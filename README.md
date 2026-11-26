@@ -1,7 +1,10 @@
 # cadkit
 
-A Claude Code plugin that checks FreeCAD designs **before** you spend
-filament on them. Every printable version gets a design manifest
+A Claude Code plugin for maker projects that combine 3D-printed parts and
+Arduino electronics, from the first idea to a working build. A **project
+file** (`project.yaml`) keeps the idea, components, wiring, power budget and
+build plan in one place and is checked like code. For the CAD side, cadkit
+checks FreeCAD designs **before** you spend filament on them. Every printable version gets a design manifest
 (`cadkit.yaml`). The validator measures the real geometry against it and
 against **your printer's calibrated tolerances**, writes a report, and keeps
 "ready to print" behind a gate.
@@ -13,11 +16,15 @@ Status: it works on one Windows setup (FreeCAD 1.1, Bambu Lab P1S, PLA). See
 
 | Skill / hook | What it does |
 |---|---|
+| `idea` | Turns a loose idea into testable requirements, 2-3 concepts with the hard part named, and a `project.yaml` |
+| `project` | Keeps `project.yaml` current and checks it: pin clashes, pins without PWM/analog/I2C, overloaded 5V/3V3 board pins, power budget, 3.3 V vs 5 V logic, phase gates |
+| `plan` | A prioritised build plan: buy (what the inventory lacks), test on a breadboard, print in batches, solder, assemble, flash, with dependencies and "what's next" |
 | `cad-validation` | Buildability rules for the designer, plus **cadkit**: walls, mesh, export, screws along their axes, fits, clashes, bought-part clearances, access paths, motion sweeps |
 | `cad-review` | A strict pre-print review that starts from the cadkit report |
 | `print-settings` | A Bambu Studio settings sheet, issued only when the gate is open |
 | `bom` | A bill of materials worked out from the geometry |
 | Stop hook | If STLs were written without a current report, Claude must validate before it stops |
+| Start hook | A session opened in a project folder gets the project's phase, gate and next step |
 | Prompt hook | Mentioning a filament your profile has no tolerances for gives Claude a reminder of what to calibrate |
 
 Every check ends as PASS, FAIL, WARNING or NOT TESTED. The verdict is one of
@@ -87,6 +94,29 @@ node <cadkit>/cadkit.mjs slice    path/to/project/v3   # Bambu CLI: time, layers
 each part with `lib/export.py` (`export_part`), so the B-rep, the STL and the
 print pose always match.
 
+## Project file
+
+One `project.yaml` per project folder. The template, with a comment on every
+field: [skills/project/projkit/templates/project.yaml](skills/project/projkit/templates/project.yaml).
+Phases go idea → electronics → cad → firmware → build → done, and each has a
+gate: you can't be in `cad` while a component is still a candidate or a pin is
+used twice.
+
+```text
+node <projkit>/projkit.mjs new    path/to/my-project     # from the template
+node <projkit>/projkit.mjs check  path/to/my-project     # FAIL / WARNING / NOT TESTED / PASS + gate
+node <projkit>/projkit.mjs status path/to/my-project     # one line
+node <projkit>/projkit.mjs plan   path/to/my-project     # build steps in order, what to buy, what's next
+node <projkit>/projkit.mjs needs  path/to/my-project     # components as an inventory project file
+```
+
+`<projkit>` is `<plugin>/skills/project/projkit`. Pin checks need a pin table
+for the board in `projkit/boards/` (Arduino Uno and Nano are included).
+`plan` checks the components against your stock when `inventory_cli` in the
+config points at an inventory tool's
+`inv.mjs`. YAML is read with a vendored copy of js-yaml (MIT,
+`projkit/vendor/`), so projkit needs nothing but Node.
+
 ## Adding components and fasteners
 
 Bought parts live in `skills/cad-validation/cadkit/library/components/` (an
@@ -102,6 +132,7 @@ profile.
 
 ```text
 node skills/cad-validation/cadkit/tests/run_tests.mjs
+node skills/project/projkit/tests/run_tests.mjs     # project file: pins, power, gates, plan order
 ```
 
 This builds an Arduino Uno enclosure in 19 variants, each with one seeded

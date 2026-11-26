@@ -1,0 +1,99 @@
+# Project file - ONE per project, in the project's root folder (project.yaml).
+# The single source of truth that every cadkit skill reads and updates:
+#   /idea writes idea, concepts, functions; electronics fills components, pins, power;
+#   CAD reads components (dimensions) and mechanics; firmware reads controller + pins.
+# Every section must be present. A section with nothing in it says `none` (or []),
+# so "not decided yet" can never look like "forgotten".
+# Check with:  node projkit.mjs check <project folder>
+
+schema: 1
+project: my-project           # kebab-case id, same as the folder name
+title: My project
+phase: idea                   # idea | electronics | cad | firmware | build | done | paused
+updated: 2026-01-01
+next_step: >
+  The one concrete thing to do next.
+
+# --- 1. The idea (written by /idea) -------------------------------------------
+idea:
+  problem: >
+    What is annoying, missing or fun? One or two sentences, in the user's words.
+  must:                       # testable: "waters when soil is dry", not "works well"
+    - Something it must do
+  nice: []                    # would be nice, not required
+  out_of_scope: []            # said no to on purpose
+  constraints:
+    budget: unknown           # e.g. "300 SEK", or unknown
+    power: unknown            # usb-5v | battery | mains-adapter | solar | unknown
+    size_mm: none             # [x, y, z] maximum outer size, or none
+    environment: indoor       # indoor | outdoor | wet | hot | moving ...
+    skill: unknown            # what the user is comfortable with: soldering, SMD, mains (never), ...
+
+concepts:                     # 2-3 genuinely different ways to do it
+  - id: A
+    summary: One line
+    difficulty: easy          # easy | medium | hard
+    est_cost: unknown
+    uses_owned: []            # inventory ids it reuses, if the stock was checked
+    pros: []
+    cons: []
+chosen: none                  # concept id, once the user has picked one
+
+functions:                    # what the thing must DO, independent of parts
+  - id: example-function
+    kind: sense               # sense | actuate | display | input | control | power | comms | structure
+    what: Know when X happens
+    by: []                    # component ids that do it; [] = not solved yet
+
+# --- 2. Electronics (filled by electronics design) ----------------------------
+controller: none              # component id of the main board, once chosen
+
+components: none              # or a list:
+  # - id: uno                   # short, referenced as uno.sig in pins
+  #   part: Arduino Uno R3      # specific: the variant matters
+  #   qty: 1
+  #   status: CANDIDATE         # CANDIDATE | DECIDED | OWNED | BOUGHT
+  #   board: arduino-uno        # only for the controller: a file in projkit/boards/
+  #   inventory: none           # {id: <inventory id>} or {match: {category: mcu, tags: [5v]}} or none
+  #   cad: arduino-uno-r3       # id in the CAD component library, or none
+  #   dims_mm: none             # [l, w, h] rough box when there is no CAD file: {v: [..], src: ASSUMED}
+  #   power: {v: 5, logic_v: 5, ma: 50, peak_ma: 50, src: DATASHEET}   # src: DATASHEET | MEASURED | ASSUMED
+  #   needs: [digital]          # digital | analog | pwm | interrupt | i2c | spi | uart
+
+pins: none                    # controller pin -> component signal, or a list:
+  # - {pin: A0, to: moisture.sig}
+  # - {pin: D9, to: servo.sig}
+
+power: none                   # or:
+  # source: {part: "5 V 2 A USB adapter", v: 5, max_ma: 2000}
+  # notes: >
+  #   Servo powered from the adapter, not from the Uno's 5 V pin.
+
+# --- 3. Mechanics, firmware, build --------------------------------------------
+mechanics:
+  cad: none                   # folder with the vN/ CAD versions (each has its cadkit.yaml), or none
+  material: PLA
+  notes: none
+
+firmware:
+  fqbn: none                  # e.g. arduino:avr:uno
+  sketch: none                # folder with the .ino, e.g. firmware/my-project
+
+# --- 4. Build plan (written by /plan): the order to do things in ---------------
+plan: none                    # or a list of steps; `node projkit.mjs plan .` sorts them and shows what is next
+  # - id: buy-parts
+  #   kind: buy                 # buy | print | test | solder | wire | assemble | flash | calibrate | measure
+  #   what: Order the pump and the MOSFET module
+  #   parts: [pump, mosfet]     # component ids and/or printed part names this step makes available or uses
+  #   after: []                 # step ids that must be done first
+  #   why: Longest lead time, so it goes first
+  #   done: false
+  # - id: breadboard
+  #   kind: test
+  #   what: Breadboard pump + sensor with a test sketch before anything is soldered
+  #   parts: [nano, pump, mosfet, moist]
+  #   after: [buy-parts]
+
+# --- Memory -------------------------------------------------------------------
+open_questions: []            # - {q: "Indoor or balcony?", blocks: idea}
+decisions: []                 # - {date: 2026-01-01, what: "USB power", why: "always near a socket"}

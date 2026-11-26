@@ -1,0 +1,45 @@
+# Pin table for the project check. Pins are named D0..D13, A0..A5, plus power pins.
+id: arduino-uno
+name: Arduino Uno R3 (ATmega328P) and R3-compatible clones
+fqbn: arduino:avr:uno
+logic_v: 5
+sources:
+  - "Arduino UNO R3 datasheet / product page: https://docs.arduino.cc/hardware/uno-rev3"
+  - "ATmega328P datasheet, DC characteristics (40 mA absolute max per pin, 200 mA total)"
+pins:
+  D0:  [digital, uart]          # RX, shared with USB serial
+  D1:  [digital, uart]          # TX, shared with USB serial
+  D2:  [digital, interrupt]
+  D3:  [digital, pwm, interrupt]
+  D4:  [digital]
+  D5:  [digital, pwm]
+  D6:  [digital, pwm]
+  D7:  [digital]
+  D8:  [digital]
+  D9:  [digital, pwm]
+  D10: [digital, pwm, spi]      # SS
+  D11: [digital, pwm, spi]      # MOSI
+  D12: [digital, spi]           # MISO
+  D13: [digital, spi]           # SCK, on-board LED
+  A0:  [digital, analog]
+  A1:  [digital, analog]
+  A2:  [digital, analog]
+  A3:  [digital, analog]
+  A4:  [digital, analog, i2c]   # SDA
+  A5:  [digital, analog, i2c]   # SCL
+power_pins:
+  5V:  {rail: 5v}
+  3V3: {rail: 3v3}
+  VIN: {rail: vin}
+  GND: {rail: gnd}
+buses:
+  i2c: {sda: A4, scl: A5}
+  spi: {ss: D10, mosi: D11, miso: D12, sck: D13}
+  uart: {rx: D0, tx: D1}
+limits:
+  pin_ma: 20                    # recommended per pin (40 is the absolute maximum)
+  rail_ma:
+    5v: 400                     # conservative: USB is fused at 500 mA and the board itself uses some
+    3v3: 50
+notes:
+  uart: D0/D1 are the USB serial port. Using them breaks upload and Serial.print while connected.
