@@ -736,7 +736,9 @@ ${note}`);
   } else if (cmd === 'log') {
     const [f, p] = readOr2(arg);
     const L = await import('./log.mjs');
-    const text = rest.filter((x, i) => !x.startsWith('--') && !(i > 0 && rest[i - 1] === '--kind')).join(' ').trim();
+    // the text is every word that is not a flag or a flag's value
+    const VALUE_FLAGS = ['--kind', '--item', '--qty', '--last'];
+    const text = rest.filter((x, i) => !x.startsWith('--') && !(i > 0 && VALUE_FLAGS.includes(rest[i - 1]))).join(' ').trim();
     if (text) {
       const kind = typeof flag('--kind') === 'string' ? flag('--kind') : 'note';
       try { console.log(`logged in ${L.append(f, p, text, kind)}`); } catch (e) { console.error(e.message); process.exit(2); }

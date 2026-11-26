@@ -221,6 +221,10 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   const es = L.entries(pf);
   t('log: entries read back, local date (23:50 stays on the 26th)', es.length === 3 && es[0].day === '2026-11-26' && es[1].day === '2026-11-27');
   t('log: a problem with a later matching fix is closed', L.openProblems(es).map((e) => e.text).join() === 'Servo jitters at rest');
+  const cliLog = (...a) => spawnSync(process.execPath, [path.join(HERE, '..', 'projkit.mjs'), 'log', tmp, ...a], { encoding: 'utf8' });
+  const before = fs.readFileSync(path.join(tmp, 'LOG.md'), 'utf8');
+  cliLog('--last', '3');
+  t('log CLI: --last 3 only reads (found in the pilot: it logged "3")', fs.readFileSync(path.join(tmp, 'LOG.md'), 'utf8') === before);
   let bad = false; try { L.append(pf, p, 'x', 'banana'); } catch { bad = true; }
   t('log: unknown kind refused', bad);
   const hook = spawnSync(process.execPath, [path.join(HERE, '..', 'hooks', 'session_status.mjs')], { input: JSON.stringify({ cwd: tmp }), encoding: 'utf8' });
