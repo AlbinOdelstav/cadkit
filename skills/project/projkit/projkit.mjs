@@ -6,6 +6,8 @@
 //   node projkit.mjs status <folder|file>            one line: phase, gate, next step
 //   node projkit.mjs plan <folder|file> [--json]    build steps in order, what is next, what to buy
 //   node projkit.mjs wiring <folder|file> [--write [F]] wiring tables + Mermaid diagram (default WIRING.md)
+//   node projkit.mjs bringup <folder|file> [--write [F]] step-by-step power-up checklist (default BRINGUP.md)
+//   node projkit.mjs log <folder|file> ["text" --kind K]  append to LOG.md, or show the latest entries
 //   node projkit.mjs needs <folder|file> [--write F] the components as an inventory project file
 //   node projkit.mjs boards                          the pin tables in boards/
 //
@@ -620,6 +622,25 @@ ${note}`);
     const w = flag('--write');
     if (w) { const out = typeof w === 'string' ? path.resolve(w) : path.join(path.dirname(f), 'WIRING.md'); fs.writeFileSync(out, doc); console.log(`wrote ${out}`); }
     else process.stdout.write(doc);
+  } else if (cmd === 'bringup') {
+    const [f, p] = readOr2(arg);
+    const { bringup, bringupMarkdown } = await import('./bringup.mjs');
+    const doc = bringupMarkdown(p, bringup(p));
+    const w = flag('--write');
+    if (w) { const out = typeof w === 'string' ? path.resolve(w) : path.join(path.dirname(f), 'BRINGUP.md'); fs.writeFileSync(out, doc); console.log(`wrote ${out}`); }
+    else process.stdout.write(doc);
+  } else if (cmd === 'log') {
+    const [f, p] = readOr2(arg);
+    const L = await import('./log.mjs');
+    const text = rest.filter((x, i) => !x.startsWith('--') && !(i > 0 && rest[i - 1] === '--kind')).join(' ').trim();
+    if (text) { const kind = typeof flag('--kind') === 'string' ? flag('--kind') : 'note'; try { console.log(`logged in ${L.append(f, p, text, kind)}`); } catch (e) { console.error(e.message); process.exit(2); } }
+    else {
+      const es = L.entries(f);
+      for (const e of es.slice(-Number(flag('--last') || 15))) console.log(`${e.day} ${e.time} ${e.kind.padEnd(8)} (${e.phase}) ${e.text}`);
+      const open = L.openProblems(es);
+      if (open.length) console.log(`\nopen problems: ${open.map((e) => `${e.day}: ${e.text}`).join(' | ')}`);
+      if (!es.length) console.log('no log yet: node projkit.mjs log <project> "what happened" [--kind done|measured|problem|fixed|decided|bought|printed]');
+    }
   } else if (cmd === 'needs') {
     const [, p] = readOr2(arg);
     const out = yaml.dump(toNeeds(p), { lineWidth: 120 });
@@ -629,7 +650,7 @@ ${note}`);
   } else if (cmd === 'boards') {
     for (const id of boardIds()) { const b = loadBoard(id); console.log(`${id.padEnd(16)} ${b.fqbn.padEnd(20)} ${b.logic_v} V  ${b.name}`); }
   } else {
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 12).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 14).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(cmd ? 2 : 0);
   }
 }
