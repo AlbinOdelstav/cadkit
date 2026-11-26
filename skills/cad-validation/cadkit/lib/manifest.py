@@ -85,6 +85,12 @@ def load(path):
         for j in f.get("joins", []):
             if j not in names:
                 errs.append("fastener %s joins unknown '%s'" % (f.get("id"), j))
+        for key in ("installed_before", "nut_before"):
+            for j in f.get(key) or []:
+                if j not in names:
+                    errs.append("fastener %s: %s lists unknown '%s'" % (f.get("id"), key, j))
+        if f.get("nut_insert") not in (None, "print_pause"):
+            errs.append("fastener %s: nut_insert can only be print_pause" % f.get("id"))
     for x in m.get("fits") or []:
         for k in ("name", "a", "b", "axis", "type"):
             if k not in x:

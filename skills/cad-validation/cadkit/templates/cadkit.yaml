@@ -39,6 +39,9 @@ fasteners:                    # every screw, or: none
     dir: [0, 0, -1]           # insertion direction
     joins: [Lid, Base]        # head side first; for self-tap/insert the LAST one holds the thread
     installed_before: []      # parts NOT present yet when this screw goes in (driver access)
+    # kind: nut only:
+    # nut_before: []          # parts NOT present yet when the nut goes in (kept out of its insertion path)
+    # nut_insert: print_pause # the nut is dropped in mid-print (no path from outside); a print pause is needed
 
 holes_not_fasteners:          # fastener-sized holes that are not screws (cable, pin, vent)
   - {part: Base, at: [80, 30, 10], reason: "cable exit"}

@@ -29,7 +29,13 @@ const OUT_TT = path.join(HERE, 'tt_mount', 'out');
 const b2 = spawnSync(CFG.freecadcmd, [path.join(HERE, 'tt_mount', 'build.py')],
   { env: childEnv(CFG, { CADKIT_HOME: KIT }), encoding: 'utf8', maxBuffer: 1 << 26 });
 if (!fs.existsSync(path.join(OUT_TT, 'clean', 'cadkit.yaml'))) { console.error('TT test design build failed: ' + (b2.stderr || '')); process.exit(3); }
-const vdir = (v) => (v.startsWith('tt/') ? path.join(OUT_TT, v.slice(3)) : path.join(OUT, v));
+// test design 3: plate bolted to a block with a captive hex nut (nut fit and insertion path)
+const OUT_NUT = path.join(HERE, 'nut_block', 'out');
+const b3 = spawnSync(CFG.freecadcmd, [path.join(HERE, 'nut_block', 'build.py')],
+  { env: childEnv(CFG, { CADKIT_HOME: KIT }), encoding: 'utf8', maxBuffer: 1 << 26 });
+if (!fs.existsSync(path.join(OUT_NUT, 'clean', 'cadkit.yaml'))) { console.error('nut test design build failed: ' + (b3.stderr || '')); process.exit(3); }
+const vdir = (v) => (v.startsWith('tt/') ? path.join(OUT_TT, v.slice(3))
+  : v.startsWith('nut/') ? path.join(OUT_NUT, v.slice(4)) : path.join(OUT, v));
 
 // variant -> what must be found. check: substring of the check name.
 const EXPECT = {
@@ -60,6 +66,13 @@ const EXPECT = {
   'tt/pin_tight_vs_unc': { find: [['WARNING', 'fits', 'fit pins in gearbox holes']], measure: ['mh_x'], why: 'pins 2.5: 0.25 per side is less than the ±0.3 hole-position uncertainty' },
   'tt/pin_too_big': { find: [['FAIL', 'fits', 'fit pins in gearbox holes']], why: 'pins 2.95 in 3.0 holes' },
   'tt/screw_into_gearbox': { find: [['FAIL', 'fasteners', 'thread into component:tt']], why: 'screw threaded into a gearbox hole the library does not declare as threadable' },
+  'nut/clean': { noFail: true, verdict: 'READY', find: [['PASS', 'fasteners', 'hex nut fits the pocket'], ['PASS', 'fasteners', 'nut can be inserted']], why: 'hex pocket open at the block bottom: nut pressed in along the axis' },
+  'nut/side_slot': { noFail: true, find: [['PASS', 'fasteners', 'nut can be inserted']], why: 'nut slides in sideways through a slot' },
+  'nut/trapped': { find: [['FAIL', 'fasteners', 'nut can be inserted']], why: 'closed hex cavity inside the block: no way in' },
+  'nut/trapped_print_pause': { noFail: true, find: [['WARNING', 'fasteners', 'nut can be inserted'], ['WARNING', 'print', 'print pause for a nut']], why: 'same cavity, declared nut_insert: print_pause - a WARNING, never a PASS' },
+  'nut/round_pocket': { find: [['FAIL', 'fasteners', 'hex nut fits the pocket']], why: 'round pocket d 5.9: wide enough across the flats, but the corners (6.5) hit' },
+  'nut/slot_covered': { find: [['FAIL', 'fasteners', 'nut can be inserted']], why: 'a cover part blocks the slot' },
+  'nut/slot_covered_declared': { noFail: true, find: [['PASS', 'fasteners', 'nut can be inserted']], why: 'cover listed under nut_before: it goes on after the nut' },
 };
 
 function run(args) {

@@ -33,6 +33,109 @@ def screw_solid(o, u, d, L, dk, k):
     return shank.fuse(head)
 
 
+def _frame(u):
+    a = V(1, 0, 0) if abs(u.x) < 0.9 else V(0, 1, 0)
+    e1 = u.cross(a)
+    e1.normalize()
+    e2 = u.cross(e1)
+    e2.normalize()
+    return e1, e2
+
+
+def _hull2(pts):
+    """2D convex hull (monotone chain), counter-clockwise."""
+    pts = sorted(set((round(x, 6), round(y, 6)) for x, y in pts))
+    if len(pts) < 3:
+        return pts
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) >= 2 and cross(hi[-2], hi[-1], p) <= 0:
+            hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+
+def _prism(pts2, o, u, e1, e2, t0, h):
+    """Prism over a 2D polygon (in the e1/e2 plane), from depth t0 along u, height h."""
+    base = o + u * t0
+    P = [base + e1 * x + e2 * y for x, y in pts2]
+    return Part.Face(Part.makePolygon(P + [P[0]])).extrude(u * h)
+
+
+def _hexagon(rc, deg):
+    return [(rc * math.cos(math.radians(deg + 60 * k)), rc * math.sin(math.radians(deg + 60 * k)))
+            for k in range(6)]
+
+
+def check_nut_insertion(rep, fid, f, solids, o, u, seat, m, af_eff, reach):
+    """Where the nut sits, a real hex nut (AF af_eff) must fit, and it must have
+    a straight free path out to open air: along the screw axis either way, or
+    sideways in 12 directions. Parts that go on after the nut (`nut_before`,
+    `installed_before`) are left out of the path."""
+    e1, e2 = _frame(u)
+    rc = af_eff / math.sqrt(3.0)
+    near = {n: sh for n, sh in solids.items()
+            if (geom.min_dist(sh, _prism(_hexagon(rc + 1.0, 0), o, u, e1, e2, seat, m)) or 0) < 0.5}
+    best = None
+    for deg in range(0, 60, 3):
+        hx = _prism(_hexagon(rc, deg), o, u, e1, e2, seat, m)
+        v = sum((geom.overlap_volume(sh, hx) or 0.0) for sh in near.values())
+        if best is None or v < best[0]:
+            best = (v, deg)
+    if best[0] > 0.05:
+        rep.add("fasteners", "hex nut fits the pocket", FAIL,
+                "the nut's corners hit material (%.2f mm3 at the best rotation) - a round or too small pocket" % best[0],
+                "hex pocket AF >= %.2f" % af_eff, where="seat at %.1f mm along the screw" % seat, item=fid)
+        return
+    rep.add("fasteners", "hex nut fits the pocket", PASS,
+            "hex AF %.2f fits at %.1f mm along the screw" % (af_eff, seat), item=fid)
+    deg = best[1]
+    hexa = _hexagon(rc, deg)
+    skip = set(f.get("installed_before") or []) | set(f.get("nut_before") or [])
+    block = {n: sh for n, sh in solids.items() if n not in skip}
+    paths = [("along the screw axis, from the head side", _prism(hexa, o, u, e1, e2, seat - reach, m + reach)),
+             ("along the screw axis, from the tip side", _prism(hexa, o, u, e1, e2, seat, m + reach))]
+    for k in range(12):
+        ph = math.radians(deg + 30 * k)
+        dx, dy = math.cos(ph) * reach, math.sin(ph) * reach
+        d3 = e1 * math.cos(ph) + e2 * math.sin(ph)
+        pts = _hull2(hexa + [(x + dx, y + dy) for x, y in hexa])
+        paths.append(("sideways towards (%.2f, %.2f, %.2f)" % (d3.x, d3.y, d3.z),
+                      _prism(pts, o, u, e1, e2, seat, m)))
+    free, worst = None, None
+    for label, sw in paths:
+        hits = [(n, geom.overlap_volume(sh, sw)) for n, sh in block.items()]
+        hits = [(n, v) for n, v in hits if v is None or v > 0.05]
+        if not hits:
+            free = label
+            break
+        if worst is None:
+            worst = hits
+    if f.get("nut_insert") == "print_pause":
+        rep.add("fasteners", "nut can be inserted", PASS if free else WARN,
+                ("free path %s" % free) if free else
+                "declared: dropped in during a print pause (no free path from outside)",
+                "pause the print before the layer that closes the pocket", item=fid)
+        if not free:
+            rep.add("print", "print pause for a nut", WARN,
+                    "nut %s goes in during a print pause: add the pause in the slicer" % fid, item=fid)
+    elif free:
+        rep.add("fasteners", "nut can be inserted", PASS, "free path %s" % free, item=fid)
+    else:
+        rep.add("fasteners", "nut can be inserted", FAIL,
+                "no straight free path for the nut (axis both ways, 12 sideways directions); "
+                "blocked e.g. by %s" % ", ".join(n for n, _ in worst),
+                "a part that goes on after the nut belongs under nut_before; "
+                "a nut dropped in mid-print needs nut_insert: print_pause", item=fid)
+
+
 def check_fasteners(rep, man, solids, tol, unc_near, hole_at=None):
     """solids: {name: shape} for printed parts and 'component:<id>' bodies.
     unc_near(name, shape) -> (unc, src, dims) of the component bodies near shape."""
@@ -279,7 +382,8 @@ def check_fasteners(rep, man, solids, tol, unc_near, hole_at=None):
                 window = [t2 for t2 in ts if t <= t2 <= t + nut["m"]]
                 free = all(min(fv for t2, fv in prof[n] if t2 in window) >= need_r for n in names)
                 if free:
-                    ok_seat = t
+                    ok_seat = t     # the first free seat: where the nut ends up when tightened
+                    break
             if ok_seat is None:
                 rep.add("fasteners", "nut fits and is fully engaged", FAIL,
                         "no %.1f mm deep space of r >= %.2f before the tip" % (nut["m"], need_r),
@@ -288,8 +392,16 @@ def check_fasteners(rep, man, solids, tol, unc_near, hole_at=None):
                 rep.add("fasteners", "nut fits and is fully engaged", PASS,
                         "seat at %.1f mm, %.1f mm of thread past the nut" % (ok_seat, L - ok_seat - nut["m"]),
                         item=fid)
-                rep.add("fasteners", "nut can be inserted", NT,
-                        "insertion path of the nut not checked - look at the pocket", item=fid)
+                reach_n = 20.0
+                for sh in solids.values():
+                    bb = sh.BoundBox
+                    for x in (bb.XMin, bb.XMax):
+                        for y in (bb.YMin, bb.YMax):
+                            for z in (bb.ZMin, bb.ZMax):
+                                reach_n = max(reach_n, (V(x, y, z) - o).Length + 5)
+                extra_lo = (holes.get("nut_trap_af_extra") or [0.2])[0]
+                check_nut_insertion(rep, fid, f, solids, o, u, ok_seat, nut["m"],
+                                    nut["af"] + extra_lo - 0.05, reach_n)
 
         # -- screwdriver access from the head side
         skip = set(f.get("installed_before", []))

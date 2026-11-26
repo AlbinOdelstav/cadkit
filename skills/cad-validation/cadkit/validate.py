@@ -20,7 +20,7 @@ import os, sys, time, json, traceback
 _RAN = globals().get("_CADKIT_RAN", False)
 _CADKIT_RAN = True
 
-TOOL_VERSION = "1.2.0"
+TOOL_VERSION = "1.3.0"
 HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else \
     os.environ.get("CADKIT_HOME", os.getcwd())
 sys.path.insert(0, HERE)
@@ -177,7 +177,7 @@ def run(mpath):
         "Strength under load: not analysed (no FEM). Use print orientation and walls; test the part.",
         "Bought parts are only as right as their library dims; see 'Measure these'.",
         "Slicer result (supports, time, filament) is not part of this report; run `cadkit slice`.",
-        "Assembly ORDER is only checked where fasteners declare `installed_before`.",
+        "Assembly ORDER is only checked where fasteners declare `installed_before` / `nut_before`.",
     ]
     return rep, out, man
 
