@@ -25,6 +25,10 @@ tolerances: ~/.cadkit/my-printer-pla.yaml
 # which components you already own and which need a buy step.
 # inventory_cli: <path to your inventory>/inv.mjs
 
+# Optional: arduino-cli (for the firmware skill). Auto-detected on PATH and
+# inside Arduino IDE 2.
+# arduino_cli: C:/path/to/arduino-cli.exe
+
 # Optional: the folder where your projects live (one subfolder with a
 # project.yaml per project). /idea creates new projects here.
 # projects: ~/Documents/maker-projects

@@ -18,6 +18,7 @@ settings.local.json
 **/calibration/out/
 
 # --- generated output
+**/.fwkit/
 **/out/
 **/validation/
 **/tests/RESULTS.md

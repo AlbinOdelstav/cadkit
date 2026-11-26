@@ -32,6 +32,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/firmware/fwkit/hooks/compile_on_edit.mjs\"",
+            "timeout": 180
+          }
+        ]
+      }
     ]
   }
 }
