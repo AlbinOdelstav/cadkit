@@ -164,7 +164,7 @@ export function check(p, file = '') {
   }
 
   // --- pins
-  const pins = list(p.pins);
+  const pins = pinEntries(p);
   const usedSignal = new Map();
   const onPin = new Map(); // pin -> [to]
   for (const e of pins) {
@@ -175,7 +175,7 @@ export function check(p, file = '') {
     if (usedSignal.has(to)) FAIL('pins', `${to} is wired to both ${usedSignal.get(to)} and ${pin}`);
     usedSignal.set(to, pin);
     if (!onPin.has(pin)) onPin.set(pin, []);
-    onPin.get(pin).push({ to, cid, sig: str(sig).toLowerCase(), as: str(e.as).toLowerCase() });
+    onPin.get(pin).push({ to, cid, sig: str(sig).toLowerCase(), as: str(e.as).toLowerCase(), shared: e.shared === true });
   }
   if (board) {
     const bus = board.buses || {};
@@ -216,11 +216,13 @@ export function check(p, file = '') {
       if (caps.includes('strapping')) WARN('pins', `${pin} (${uses.map((u) => u.to).join(', ')}): ${bnote('strapping', pin) || 'strapping pin, sampled at reset'}`);
       if (caps.includes('adc2') && uses.some(isAnalogRead)) WARN('pins', `${pin}: ${(board.notes && board.notes.adc2) || 'ADC2 pin: analogRead does not work while Wi-Fi is on'}`);
       const allI2c = uses.every((u) => ['sda', 'scl'].includes(u.sig) || u.as === 'i2c');
-      if (uses.length > 1 && !(allI2c && i2cPins.has(pin))) {
+      // several parts on one pin: an I2C bus, or a net declared shared on purpose (to: [a.x, b.x])
+      if (uses.length > 1 && !(allI2c && i2cPins.has(pin)) && !uses.every((u) => u.shared)) {
         FAIL('pins', `${pin} is used by ${uses.map((u) => u.to).join(' and ')}`); pinFail = true;
       }
       for (const u of uses) {
-        const want = u.as || ({ sda: 'i2c', scl: 'i2c', mosi: 'spi', miso: 'spi', sck: 'spi', rx: 'uart', tx: 'uart' })[u.sig] || '';
+        // `as: input|output` says the direction, not a capability the pin must have
+        const want = (['input', 'output'].includes(u.as) ? '' : u.as) || ({ sda: 'i2c', scl: 'i2c', mosi: 'spi', miso: 'spi', sck: 'spi', rx: 'uart', tx: 'uart' })[u.sig] || '';
         if (want && !caps.includes(want)) { FAIL('pins', `${u.to} needs ${want}, but ${pin} on ${board.id} has ${caps.join('/')}`); pinFail = true; }
         const cNeeds = list(byId.get(u.cid) && byId.get(u.cid).needs).map(str);
         if (!want && !caps.includes('digital') && caps.includes('analog') && !cNeeds.includes('analog')) {
@@ -249,18 +251,19 @@ export function check(p, file = '') {
   const ctrlComp = byId.get(ctrlId);
   const ctrlLogic = Number((board && board.logic_v) || (ctrlComp && ctrlComp.power && ctrlComp.power.logic_v)) || null;
   let total = 0, known = true;
-  const noData = [];
+  const noData = [], assumed = [];
   for (const c of comps) {
     const pw = c.power || {};
     const ma = Number(pw.peak_ma ?? pw.ma);
     if (!Number.isFinite(ma)) { if (!['button', 'passive'].includes(str(c.type))) { known = false; noData.push(c.id); } continue; }
     total += ma * (Number(c.qty) || 1);
-    if (str(pw.src) === 'ASSUMED') WARN('power', `${c.id}: ${ma} mA is ASSUMED - check the datasheet`);
+    if (str(pw.src) === 'ASSUMED') assumed.push(`${c.id} ${ma} mA`);
     const lv = Number(pw.logic_v);
     if (ctrlLogic && lv && str(c.id) !== ctrlId && Math.abs(lv - ctrlLogic) > 0.5 && [...usedSignal.keys()].some((t) => t.split('.')[0] === c.id)) {
       WARN('power', `${c.id} has ${lv} V logic, the controller ${ctrlLogic} V: needs a level shifter unless its datasheet says ${ctrlLogic} V tolerant`);
     }
   }
+  if (assumed.length) WARN('power', `currents that are ASSUMED, check the datasheets: ${assumed.join(', ')}`);
   if (noData.length) NT('power', `no current for: ${noData.join(', ')} (power.ma / peak_ma)`);
   const src = p.power && p.power.source;
   if (comps.length) {
@@ -347,10 +350,22 @@ const INDUCTIVE = ['motor', 'pump', 'solenoid', 'relay'];
 export const TYPES = ['controller', 'sensor', 'input', 'button', 'display', 'led', 'led-strip', 'motor', 'pump',
   'solenoid', 'relay', 'servo', 'stepper', 'driver', 'module', 'buzzer', 'power', 'passive'];
 
+// pins as a flat list. `to` may be a list: one pin wired to several parts on purpose
+// (a shared enable line, a single-wire UART bus); each gets shared: true.
+export function pinEntries(p) {
+  const out = [];
+  for (const e of list(p.pins)) {
+    if (!e || typeof e !== 'object') continue;
+    const tos = Array.isArray(e.to) ? e.to : [e.to];
+    for (const t of tos) out.push({ ...e, to: str(t), shared: tos.length > 1 || e.shared === true });
+  }
+  return out;
+}
+
 export function connections(p) {
   const out = [];
   const board = boardOf(p);
-  for (const e of list(p.pins)) out.push({ a: `board.${normPin(e.pin, board)}`, b: str(e.to), how: 'pin' });
+  for (const e of pinEntries(p)) out.push({ a: `board.${normPin(e.pin, board)}`, b: str(e.to), how: 'pin' });
   for (const w of list(p.wires)) out.push({ a: str(w.from), b: str(w.to), how: 'wire', note: str(w.note) });
   return out;
 }
@@ -396,8 +411,12 @@ function electrical(p, { comps, byId, ctrlId, board }) {
     if (!mine.length) continue;
     const sigOf = (k) => (k.a.split('.')[0] === id ? k.a : k.b).split('.')[1] || '';
     const other = (k) => (k.a.split('.')[0] === id ? k.b : k.a);
-    const hasPower = mine.some((k) => VCC.test(sigOf(k)));
-    const hasGnd = mine.some((k) => GND.test(sigOf(k)));
+    // a motor whose every wire goes to a driver is powered (and grounded) through that driver
+    const viaDriver = mine.every((k) => { const o = byId.get(other(k).split('.')[0]); return o && str(o.type) === 'driver'; });
+    // a power module's own pins: in / out
+    const powerIo = str(c.type) === 'power' && mine.some((k) => /^(in|vin|in\+|out|vout|out\+)$/i.test(sigOf(k)));
+    const hasPower = viaDriver || powerIo || mine.some((k) => VCC.test(sigOf(k)));
+    const hasGnd = viaDriver || mine.some((k) => GND.test(sigOf(k)));
     const powered = c.power && (c.power.v !== undefined || c.power.ma !== undefined);
     if (powered && !hasPower && !['led', 'button'].includes(str(c.type))) add('WARNING', `${id}: no supply connection (vcc / v+ / vin ...): how is it powered?`);
     if (powered && !hasGnd) add('FAIL', `${id}: no gnd connection`);

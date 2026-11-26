@@ -70,6 +70,7 @@ pins: none                    # controller pin -> component signal (signal AND p
   # - {pin: D9, to: servo.sig}
   # - {pin: 5V, to: moisture.vcc}
   # - {pin: GND, to: moisture.gnd}
+  # - {pin: GPIO4, to: [drv1.en, drv2.en]}   # one pin to several parts ON PURPOSE (shared enable, UART bus)
 
 wires: none                   # every connection NOT on the controller: component <-> component, or supply.<signal>
   # - {from: supply.5v, to: servo.vcc}

@@ -109,6 +109,41 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('pin missing from the table fails', has(variant('btn.a', 'GPIO24'), 'FAIL', /GPIO24 does not exist on esp32-devkit-v1/));
 }
 
+// found in the pilot (ESP32 + TMC2209 stepper winches): shared nets, drivers, power modules
+{
+  const pilot = {
+    ...load(F('esp32-weather')),
+    controller: 'esp',
+    components: [
+      { id: 'esp', part: 'ESP32 DevKitC', status: 'DECIDED', type: 'controller', board: 'esp32-devkit-v1', power: { v: 5, logic_v: 3.3, ma: 120, src: 'DATASHEET' } },
+      { id: 'buck', part: 'LM2596 module', status: 'DECIDED', type: 'power', power: { v: 12, ma: 0, src: 'DATASHEET' } },
+      { id: 'd1', part: 'TMC2209', status: 'DECIDED', type: 'driver', power: { v: 12, logic_v: 3.3, ma: 5, src: 'DATASHEET' } },
+      { id: 'd2', part: 'TMC2209', status: 'DECIDED', type: 'driver', power: { v: 12, logic_v: 3.3, ma: 5, src: 'DATASHEET' } },
+      { id: 'm1', part: 'NEMA17', status: 'DECIDED', type: 'motor', power: { v: 12, ma: 300, src: 'DATASHEET' } },
+    ],
+    pins: [
+      { pin: 'GPIO4', to: ['d1.en', 'd2.en'] },
+      { pin: 'GPIO34', to: 'd1.diag', as: 'input' },
+      { pin: '3V3', to: ['d1.vio', 'd2.vio'] },
+      { pin: 'GND', to: ['d1.gnd', 'd2.gnd', 'buck.gnd'] },
+    ],
+    wires: [{ from: 'supply.gnd', to: 'board.GND' }, { from: 'supply.12v', to: 'buck.in' }, { from: 'buck.out', to: 'board.5V' },
+      { from: 'supply.12v', to: 'd1.vm' }, { from: 'supply.12v', to: 'd2.vm' }, { from: 'd1.coil_a', to: 'm1.coil_a' }, { from: 'd1.coil_b', to: 'm1.coil_b' }],
+    power: { source: { part: '12 V 5 A', v: 12, max_ma: 5000 } },
+    functions: [{ id: 'move', kind: 'actuate', what: 'Move', by: ['m1', 'd1'] }], plan: 'none',
+  };
+  const r = check(pilot);
+  t('pilot: a pin wired to a list of parts is a shared net, not a clash', !has(r, 'FAIL', /GPIO4 is used by/));
+  t('pilot: shared pin without the list is still a clash', has(check({ ...pilot, pins: [...pilot.pins, { pin: 'GPIO5', to: 'd1.step' }, { pin: 'GPIO5', to: 'd2.step' }] }), 'FAIL', /GPIO5 is used by d1\.step and d2\.step/));
+  t('pilot: as: input on an input-only pin is fine', !r.results.some((x) => x.level === 'FAIL' && /GPIO34/.test(x.msg)));
+  t('pilot: a motor fed only by its driver needs no own gnd/vcc', !r.results.some((x) => /m1: no (gnd|supply)/.test(x.msg)));
+  t('pilot: a power module powered through in/out', !r.results.some((x) => /buck: no supply/.test(x.msg)));
+  t('pilot: no FAIL at all', r.ok);
+  if (!r.ok) console.log('     ' + r.results.filter((x) => x.level === 'FAIL').map((x) => x.msg).join('\n     '));
+  const assumed = check({ ...pilot, components: pilot.components.map((c) => ({ ...c, power: { ...c.power, src: 'ASSUMED' } })) });
+  t('pilot: ASSUMED currents in one warning line', assumed.results.filter((x) => /ASSUMED/.test(x.msg)).length === 1);
+}
+
 // bring-up checklist and project log
 {
   const { bringup, bringupMarkdown } = await import('../bringup.mjs');

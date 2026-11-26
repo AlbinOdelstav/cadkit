@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from '../../project/projkit/vendor/js-yaml.mjs';
-import { load, resolveFile } from '../../project/projkit/projkit.mjs';
+import { load, resolveFile, pinEntries } from '../../project/projkit/projkit.mjs';
 import { loadConfig } from '../../cad-validation/cadkit/config.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -138,7 +138,7 @@ export function plan(p, opts = {}) {
     // rows without a wall connector keep the normal margin from the -x wall
     if (cx === 0 && !acc.length) cx = D.margin - D.connector_margin;
     // jumper wires / plugs going UP out of a part that is wired (headers) need their room too
-    const wired = list(p.pins).some((e) => str(e.to).split('.')[0] === x.c.id) || x.c.id === ctrl;
+    const wired = pinEntries(p).some((e) => str(e.to).split('.')[0] === x.c.id) || x.c.id === ctrl;
     const upPlug = x.lib && wired ? Math.max(-Infinity, ...x.lib.connectors.filter((k) => k.face[2] === 1 && k.plug).map((k) => k.plug.max[2])) : -Infinity;
     const pos = [cx - rb.min[0], cy - rb.min[1], pz];
     const box = { min: [cx, cy, pz + x.env.min[2]], max: [cx + w, cy + h, pz + Math.max(x.env.max[2], upPlug)] };
