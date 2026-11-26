@@ -34,8 +34,10 @@ For each function in `project.yaml` without a `by`:
 
 **Controller:** count the needs. Uno or Nano by default (pin tables exist);
 Nano when it has to be small. Mega only when pins or memory run out. ESP32 for
-Wi-Fi/Bluetooth, but it is 3.3 V logic and has no pin table yet, so say that pin
-checks will be NOT TESTED.
+Wi-Fi/Bluetooth (DevKit V1 / DevKitC: `board: esp32-devkit-v1`), but it is 3.3 V
+logic: 5 V parts need a level shifter, GPIO34-39 are inputs only, GPIO6-11 are
+the flash, and strapping / ADC2 pins get warnings. Other ESP32 boards (S2, S3,
+C3) have no pin table yet, so say that pin checks will be NOT TESTED.
 
 ## 2. Datasheet numbers, not memory
 

@@ -1,0 +1,49 @@
+schema: 1
+project: esp32-weather
+title: Wi-Fi weather station (correct ESP32 wiring)
+phase: electronics
+updated: 2026-11-26
+next_step: Breadboard it
+idea:
+  problem: I want to see temperature, humidity and light at home on my phone.
+  must: [Reports temperature to 0.5 degree over Wi-Fi every minute, Button press forces a reading]
+  nice: []
+  out_of_scope: []
+  constraints: {budget: 250 SEK, power: usb, size_mm: none, environment: indoor, skill: breadboard}
+concepts:
+  - {id: A, summary: ESP32 + BME280 + LDR posting to a web page, difficulty: easy, est_cost: 150 SEK, pros: [], cons: []}
+  - {id: B, summary: Arduino Nano + nRF24 to a base station, difficulty: medium, est_cost: 200 SEK, pros: [], cons: []}
+chosen: A
+functions:
+  - {id: sense, kind: sense, what: Measure temperature and humidity, by: [bme]}
+  - {id: light, kind: sense, what: Measure light, by: [ldr]}
+  - {id: poke, kind: input, what: Force a reading, by: [btn]}
+  - {id: status, kind: display, what: Show it is sending, by: [led]}
+  - {id: send, kind: comms, what: Post readings over Wi-Fi, by: [esp]}
+controller: esp
+components:
+  - {id: esp, part: ESP32 DevKit V1 (ESP32-WROOM-32), qty: 1, status: OWNED, type: controller, board: esp32-devkit-v1, power: {v: 5, logic_v: 3.3, ma: 80, peak_ma: 240, src: DATASHEET}}
+  - {id: bme, part: BME280 breakout (3.3 V), qty: 1, status: DECIDED, type: sensor, needs: [i2c], i2c_addr: 0x76, power: {v: 3.3, logic_v: 3.3, ma: 1, src: DATASHEET}}
+  - {id: ldr, part: LDR light sensor module (analog out), qty: 1, status: OWNED, type: sensor, needs: [analog], power: {v: 3.3, logic_v: 3.3, ma: 1, src: DATASHEET}}
+  - {id: btn, part: 6 mm tactile button, qty: 1, status: OWNED, type: button, pullup: internal}
+  - {id: led, part: 5 mm green LED, qty: 1, status: OWNED, type: led, resistor_ohm: 100, power: {v: 2.1, ma: 10, src: DATASHEET}}
+pins:
+  - {pin: GPIO21, to: bme.sda}
+  - {pin: GPIO22, to: bme.scl}
+  - {pin: IO34, to: ldr.ao}
+  - {pin: 27, to: btn.a}
+  - {pin: G23, to: led.anode, as: pwm}
+  - {pin: 3V3, to: bme.vcc}
+  - {pin: 3V3, to: ldr.vcc}
+  - {pin: GND, to: bme.gnd}
+  - {pin: GND, to: ldr.gnd}
+  - {pin: GND, to: btn.gnd}
+  - {pin: GND, to: led.gnd}
+wires: []
+power:
+  source: {part: USB phone charger 5 V 1 A, v: 5, max_ma: 1000}
+mechanics: {cad: none, material: PLA, notes: none}
+firmware: {fqbn: "esp32:esp32:esp32", sketch: none}
+plan: none
+open_questions: []
+decisions: []

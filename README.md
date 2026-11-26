@@ -113,7 +113,14 @@ node <projkit>/projkit.mjs needs  path/to/my-project     # components as an inve
 ```
 
 `<projkit>` is `<plugin>/skills/project/projkit`. Pin checks need a pin table
-for the board in `projkit/boards/` (Arduino Uno and Nano are included).
+for the board in `projkit/boards/`: Arduino Uno, Arduino Nano and ESP32 DevKit V1 /
+DevKitC (ESP32-WROOM-32) are included. On the ESP32 the check also fails
+outputs on input-only GPIO34-39 and any use of the flash pins GPIO6-11, and
+warns on strapping pins (0, 2, 5, 12, 15) and on analog reads from ADC2 pins
+(no analogRead with Wi-Fi on). ESP32 pins are named `GPIO4`; `IO4`, `G4` and
+`4` are accepted too. A part that only sends to an input-only pin is read from
+its type (button), an analog need or the signal name (`out`, `ao`, `echo`, `int` ...);
+otherwise mark the pin `as: input`.
 `plan` checks the components against your stock when `inventory_cli` in the
 config points at an inventory tool's
 `inv.mjs`. YAML is read with a vendored copy of js-yaml (MIT,

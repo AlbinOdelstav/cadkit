@@ -50,18 +50,35 @@ export function load(file) {
   return yaml.load(fs.readFileSync(file, 'utf8'));
 }
 
+const boardCache = new Map();
 export function loadBoard(id) {
+  if (boardCache.has(id)) return boardCache.get(id);
   const f = path.join(BOARDS, `${id}.yaml`);
-  return fs.existsSync(f) ? yaml.load(fs.readFileSync(f, 'utf8')) : null;
+  const b = fs.existsSync(f) ? yaml.load(fs.readFileSync(f, 'utf8')) : null;
+  boardCache.set(id, b);
+  return b;
 }
 
-// "9" / "d9" / "D09" -> "D9"; "a0" -> "A0"; "5v" -> "5V"; "3.3V" -> "3V3"
-export function normPin(p) {
+// the pin table of the project's controller, or null
+export function boardOf(p) {
+  const ctrl = list(p && p.components).find((c) => c && str(c.id) === str(p.controller));
+  return ctrl && ctrl.board ? loadBoard(str(ctrl.board)) : null;
+}
+
+// "9" / "d9" / "D09" -> "D9"; "a0" -> "A0"; "5v" -> "5V"; "3.3V" -> "3V3".
+// On a board with pin_prefix GPIO (ESP32): "4" / "IO4" / "G4" / "gpio04" -> "GPIO4", plus its aliases (VP -> GPIO36).
+export function normPin(p, board = null) {
   let s = str(p).toUpperCase().replace(/\s+/g, '');
+  if (s === '3.3V' || s === '3V') return '3V3';
+  const prefix = board && board.pin_prefix ? str(board.pin_prefix).toUpperCase() : '';
+  if (prefix === 'GPIO') {
+    const m = s.match(/^(?:GPIO|IO|G)?0*(\d+)$/);
+    if (m) return 'GPIO' + m[1];
+    const alias = board.aliases && Object.entries(board.aliases).find(([k]) => k.toUpperCase() === s);
+    return alias ? str(alias[1]) : s;
+  }
   if (/^\d+$/.test(s)) s = 'D' + s;
-  s = s.replace(/^([DA])0+(\d)/, '$1$2');
-  if (s === '3.3V' || s === '3V') s = '3V3';
-  return s;
+  return s.replace(/^([DA])0+(\d)/, '$1$2');
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +166,7 @@ export function check(p, file = '') {
   const usedSignal = new Map();
   const onPin = new Map(); // pin -> [to]
   for (const e of pins) {
-    const pin = normPin(e && e.pin), to = str(e && e.to);
+    const pin = normPin(e && e.pin, board), to = str(e && e.to);
     const [cid, sig] = to.split('.');
     if (!byId.has(cid)) FAIL('pins', `${pin} -> "${to}": "${cid}" is not a component id`);
     if (!sig) WARN('pins', `${pin} -> "${to}": no signal name (write component.signal, e.g. ${cid}.sig)`);
@@ -160,13 +177,42 @@ export function check(p, file = '') {
   }
   if (board) {
     const bus = board.buses || {};
-    const i2cPins = new Set(Object.values(bus.i2c || {}).map(normPin));
+    const i2cPins = new Set(Object.values(bus.i2c || {}).map((x) => normPin(x, board)));
+    // the USB serial pins: tagged usb_serial when the board has that tag, else every uart pin (AVR)
+    const serialTag = Object.values(board.pins || {}).some((c) => c.includes('usb_serial')) ? 'usb_serial' : 'uart';
+    const bnote = (k, pin) => (board.pin_notes && board.pin_notes[pin]) || (board.notes && board.notes[k]) || '';
+    // is this use an input (the controller only reads it)? analog reads, buttons, `as: input|analog`,
+    // and component signals that are outputs of the part (out, echo, miso, int ...)
+    const IN_SIG = /^(out|dout|do|ao|aout|echo|miso|int|irq|alert|rdy|ready|sense|sig|tx|txd|data_out)$/;
+    const isInput = (u) => {
+      const c = byId.get(u.cid) || {};
+      if (['input', 'analog'].includes(u.as)) return true;
+      if (u.as) return false;
+      if (['button', 'input'].includes(str(c.type))) return true;
+      if (IN_SIG.test(u.sig)) return true;
+      return list(c.needs).map(str).includes('analog') && !/^(sda|scl|mosi|sck|rx|cs|ss|trig|en|dc|rst|reset|in\d*|pwm\w*|ain\d|bin\d|step|dir|data|din|anode)$/.test(u.sig);
+    };
+    const isAnalogRead = (u) => u.as === 'analog' || (!u.as && list(byId.get(u.cid) && byId.get(u.cid).needs).map(str).includes('analog') && isInput(u));
     let pinFail = false;
     for (const [pin, uses] of onPin) {
       const power = board.power_pins && board.power_pins[pin];
       const caps = (board.pins && board.pins[pin]) || null;
       if (!caps && !power) { FAIL('pins', `${pin} does not exist on ${board.id}`); pinFail = true; continue; }
       if (power) continue; // shared rails are fine; the budget is checked below
+      if (caps.includes('flash')) { FAIL('pins', `${pin} (${uses.map((u) => u.to).join(', ')}) is not usable on ${board.id}: ${bnote('flash', pin) || 'it is wired to the SPI flash'}`); pinFail = true; continue; }
+      if (caps.includes('input_only')) {
+        for (const u of uses.filter((x) => !isInput(x))) {
+          FAIL('pins', `${pin} is input only on ${board.id}, but ${u.to} needs an output there (pick another pin; if ${u.cid} only reads, mark it as: input)`); pinFail = true;
+        }
+      }
+      if (caps.includes('no_pull')) {
+        for (const u of uses) {
+          const c = byId.get(u.cid);
+          if (c && str(c.pullup) === 'internal') { FAIL('pins', `${pin} has no internal pull-up on ${board.id}, but ${u.cid} has pullup: internal: add an external resistor or use another pin`); pinFail = true; }
+        }
+      }
+      if (caps.includes('strapping')) WARN('pins', `${pin} (${uses.map((u) => u.to).join(', ')}): ${bnote('strapping', pin) || 'strapping pin, sampled at reset'}`);
+      if (caps.includes('adc2') && uses.some(isAnalogRead)) WARN('pins', `${pin}: ${(board.notes && board.notes.adc2) || 'ADC2 pin: analogRead does not work while Wi-Fi is on'}`);
       const allI2c = uses.every((u) => ['sda', 'scl'].includes(u.sig) || u.as === 'i2c');
       if (uses.length > 1 && !(allI2c && i2cPins.has(pin))) {
         FAIL('pins', `${pin} is used by ${uses.map((u) => u.to).join(' and ')}`); pinFail = true;
@@ -179,7 +225,7 @@ export function check(p, file = '') {
           FAIL('pins', `${pin} is analog input ONLY on ${board.id}, but ${u.cid} does not need analog (it cannot output or read digital there)`); pinFail = true;
         }
       }
-      if (caps.includes('uart') && !uses.some((u) => u.as === 'uart')) WARN('pins', `${pin}: ${board.notes && board.notes.uart || 'it is the USB serial port and clashes with upload and Serial'}`);
+      if (caps.includes(serialTag) && !uses.some((u) => u.as === 'uart')) WARN('pins', `${pin}: ${board.notes && board.notes.uart || 'it is the USB serial port and clashes with upload and Serial'}`);
     }
     // components that need a capability: at least one of their pins must have it
     for (const c of comps) {
@@ -301,7 +347,8 @@ export const TYPES = ['controller', 'sensor', 'input', 'button', 'display', 'led
 
 export function connections(p) {
   const out = [];
-  for (const e of list(p.pins)) out.push({ a: `board.${normPin(e.pin)}`, b: str(e.to), how: 'pin' });
+  const board = boardOf(p);
+  for (const e of list(p.pins)) out.push({ a: `board.${normPin(e.pin, board)}`, b: str(e.to), how: 'pin' });
   for (const w of list(p.wires)) out.push({ a: str(w.from), b: str(w.to), how: 'wire', note: str(w.note) });
   return out;
 }
@@ -316,7 +363,7 @@ function electrical(p, { comps, byId, ctrlId, board }) {
       const [cid, sig] = end.split('.');
       if (!sig) add('FAIL', `wire end "${end}" is not component.signal (or supply.<signal>)`);
       else if (cid !== 'supply' && cid !== 'board' && !byId.has(cid)) add('FAIL', `wire end "${end}": "${cid}" is not a component id`);
-      if (cid === 'board' && board && !(board.pins[normPin(sig)] || board.power_pins[normPin(sig)])) add('FAIL', `wire end "${end}": ${normPin(sig)} does not exist on ${board.id}`);
+      if (cid === 'board' && board && !(board.pins[normPin(sig, board)] || board.power_pins[normPin(sig, board)])) add('FAIL', `wire end "${end}": ${normPin(sig, board)} does not exist on ${board.id}`);
       if (cid === 'supply' && isNone(p.power && p.power.source)) add('FAIL', `wire end "${end}" uses supply, but power.source is none`);
     }
   }
@@ -326,7 +373,7 @@ function electrical(p, { comps, byId, ctrlId, board }) {
   const parent = new Map();
   const node = (end) => {
     const [cid, sig] = end.split('.');
-    if (cid === 'board') return normPin(sig) === 'GND' ? 'GND:board' : `board.${normPin(sig)}`;
+    if (cid === 'board') return normPin(sig, board) === 'GND' ? 'GND:board' : `board.${normPin(sig, board)}`;
     if (cid === ctrlId && GND.test(sig || '')) return 'GND:board';
     return GND.test(sig || '') ? `GND:${cid}` : end;
   };

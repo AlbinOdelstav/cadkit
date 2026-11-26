@@ -1,0 +1,88 @@
+# Pin table for the project check. Pins are named GPIO<n> (projkit also accepts IO<n>, G<n>
+# and a plain number on this board), plus power pins. Capability tags beyond the common ones:
+#   input_only  can never drive an output (GPIO34-39); no_pull: no internal pull-up/down
+#   flash       wired to the module's SPI flash: never usable (GPIO6-11)
+#   strapping   sampled at reset: boot mode / flash voltage / boot log (GPIO0, 2, 5, 12, 15)
+#   adc2        ADC2 channel: analogRead fails while Wi-Fi is on
+#   usb_serial  UART0 = the USB serial port (GPIO1, GPIO3)
+# Any output-capable GPIO can carry I2C/SPI/UART/PWM through the GPIO matrix; `buses` lists
+# the Arduino-ESP32 defaults. GPIO37/38 exist on the chip but are not on the DevKit headers.
+id: esp32-devkit-v1
+name: ESP32 DevKit V1 / ESP32-DevKitC (ESP32-WROOM-32, 30- and 38-pin)
+fqbn: esp32:esp32:esp32
+logic_v: 3.3
+pin_prefix: GPIO
+sources:
+  - "ESP32 Series Datasheet v5.3, Section 3 Boot Configurations (Table 3-1 strapping pins, MTDI = VDD_SDIO voltage), Table 5-1 (1200 mA cumulative IO output), Table 5-3 DC characteristics (IOH 40 mA VDD3P3_CPU/RTC, 20 mA VDD_SDIO; IOL 28 mA), Section 2.5 power notes (supply 500 mA or more): https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf"
+  - "ESP32-WROOM-32 Datasheet v3.8, pin definitions note 2 (GPIO6-GPIO11 are connected to the integrated SPI flash), Table 13 (external supply 0.5 A minimum): https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf"
+  - "ESP32-DevKitC V4 user guide, Header Block J2/J3 and Power Supply Options: https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html"
+  - "ESP32-DevKitC V4 schematic (U2 = AMS1117-3.3 LDO; USB VBUS -> EXT_5V through D3 BAT760-7): https://dl.espressif.com/dl/schematics/esp32_devkitc_v4_sch.pdf"
+  - "ESP-IDF GPIO reference, GPIO Summary (GPIO34-39 input only without pull-ups, ADC1/ADC2 channels, ADC2 unusable with Wi-Fi): https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/gpio.html"
+  - "Arduino-ESP32 default pins (SDA 21, SCL 22, SS 5, MOSI 23, MISO 19, SCK 18, TX 1, RX 3): https://github.com/espressif/arduino-esp32/blob/master/variants/esp32/pins_arduino.h"
+pins:
+  GPIO0:  [digital, pwm, interrupt, i2c, spi, uart, analog, adc2, strapping]   # BOOT button
+  GPIO1:  [digital, pwm, interrupt, uart, usb_serial]                          # TX0
+  GPIO2:  [digital, pwm, interrupt, i2c, spi, uart, analog, adc2, strapping]   # on-board LED on many clones
+  GPIO3:  [digital, pwm, interrupt, uart, usb_serial]                          # RX0
+  GPIO4:  [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]
+  GPIO5:  [digital, pwm, interrupt, i2c, spi, uart, strapping]                 # VSPI SS
+  GPIO6:  [flash]                                                              # SPI flash CLK
+  GPIO7:  [flash]                                                              # SPI flash D0
+  GPIO8:  [flash]                                                              # SPI flash D1
+  GPIO9:  [flash]                                                              # SPI flash D2
+  GPIO10: [flash]                                                              # SPI flash D3
+  GPIO11: [flash]                                                              # SPI flash CMD
+  GPIO12: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2, strapping]   # MTDI
+  GPIO13: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]
+  GPIO14: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]
+  GPIO15: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2, strapping]   # MTDO
+  GPIO16: [digital, pwm, interrupt, i2c, spi, uart]                            # UART2 RX by convention; reserved on WROVER
+  GPIO17: [digital, pwm, interrupt, i2c, spi, uart]                            # UART2 TX by convention; reserved on WROVER
+  GPIO18: [digital, pwm, interrupt, i2c, spi, uart]                            # VSPI SCK
+  GPIO19: [digital, pwm, interrupt, i2c, spi, uart]                            # VSPI MISO
+  GPIO21: [digital, pwm, interrupt, i2c, spi, uart]                            # SDA
+  GPIO22: [digital, pwm, interrupt, i2c, spi, uart]                            # SCL
+  GPIO23: [digital, pwm, interrupt, i2c, spi, uart]                            # VSPI MOSI
+  GPIO25: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]              # DAC1
+  GPIO26: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]              # DAC2
+  GPIO27: [digital, pwm, interrupt, i2c, spi, uart, analog, adc2]
+  GPIO32: [digital, pwm, interrupt, i2c, spi, uart, analog]                    # ADC1
+  GPIO33: [digital, pwm, interrupt, i2c, spi, uart, analog]                    # ADC1
+  GPIO34: [digital, interrupt, analog, input_only, no_pull]                    # ADC1
+  GPIO35: [digital, interrupt, analog, input_only, no_pull]                    # ADC1
+  GPIO36: [digital, interrupt, analog, input_only, no_pull]                    # VP, ADC1
+  GPIO39: [digital, interrupt, analog, input_only, no_pull]                    # VN, ADC1
+aliases:
+  VP: GPIO36
+  VN: GPIO39
+power_pins:
+  3V3: {rail: 3v3}
+  5V:  {rail: 5v}                                     # DevKitC label
+  VIN: {rail: 5v}                                     # DevKit V1 label for the same pin
+  GND: {rail: gnd}
+buses:
+  i2c: {sda: GPIO21, scl: GPIO22}
+  spi: {ss: GPIO5, mosi: GPIO23, miso: GPIO19, sck: GPIO18}   # VSPI
+  uart: {rx: GPIO3, tx: GPIO1}                                # UART0 = USB serial
+limits:
+  pin_ma: 20                    # conservative: datasheet IOH is 40 mA (VDD3P3 domains), IOL 28 mA
+  total_io_ma: 1200             # datasheet absolute maximum, all IO together
+  rail_ma:
+    # Conservative. The DevKitC 3.3 V comes from an AMS1117-3.3 LDO fed from 5 V, and the
+    # ESP32 itself needs a supply good for 500 mA (Wi-Fi TX peaks ~240 mA). That leaves a few
+    # hundred mA for other parts, less when the LDO gets hot (it drops 1.7 V). Clones vary.
+    3v3: 250
+    # USB gives ~500 mA through the BAT760 diode; the LDO + ESP32 take up to ~300 of it.
+    5v: 200
+notes:
+  uart: GPIO1/GPIO3 are UART0, the USB serial port. Using them breaks upload and Serial.print while connected.
+  strapping: it is a strapping pin, sampled at reset. A pull-up/down or a part that drives it during boot can stop the board from booting or uploading.
+  adc2: it is an ADC2 pin. analogRead does not work while Wi-Fi is on; use an ADC1 pin (GPIO32-39) for analog reads with Wi-Fi.
+  flash: GPIO6-11 are wired to the module's SPI flash. Using them crashes the board.
+  input_only: GPIO34-39 are input only (no output driver) and have no internal pull-up or pull-down.
+pin_notes:
+  GPIO0: must be HIGH at reset to run the sketch, LOW = download mode (the BOOT button). Nothing may pull it low at power-up.
+  GPIO2: must be LOW or floating at reset for download mode; often the on-board LED.
+  GPIO5: sets SDIO slave timing at reset (default pull-up); a part that pulls it low at boot can matter.
+  GPIO12: MTDI selects the flash voltage at reset. HIGH = 1.8 V, which makes a 3.3 V-flash module (WROOM-32) fail to boot. Keep it low at reset.
+  GPIO15: MTDO, sampled at reset; LOW silences the boot log on UART0.
