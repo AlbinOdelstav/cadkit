@@ -18,6 +18,10 @@ Status: it works on one Windows setup (FreeCAD 1.1, Bambu Lab P1S, PLA). See
 |---|---|
 | `idea` | Turns a loose idea into testable requirements, 2-3 concepts with the hard part named, and a `project.yaml` |
 | `electronics` | Picks a part per function (owned first), datasheet currents, power design (drivers, common ground, regulators), pins, and a checked `WIRING.md` with tables and a diagram |
+| `enclosure` | Lays out the box from the parts' real sizes (component library or measured): what goes inside, on the lid or outside, USB reachable, openings, vents, size vs printer; writes `layout.yaml` for the FreeCAD build and the cadkit manifest |
+| `firmware` | Writes the sketch on top of a generated `pins.h`, test sketches per subsystem first, compiles (flash/RAM, lint), uploads and reads the serial monitor, through arduino-cli |
+| `bringup` | First power-up one part at a time (`BRINGUP.md` generated from the wiring: no-short check, supply, board alone, each part with what to see), and troubleshooting from measurements |
+| `log` | `LOG.md` per project: measurements, problems and fixes (open problems are tracked), prints, purchases; shown at session start |
 | `project` | Keeps `project.yaml` current and checks it: pin clashes, pins without PWM/analog/I2C, overloaded 5V/3V3 board pins, power budget, 3.3 V vs 5 V logic, common ground, coils on signal pins, I2C address clashes, phase gates |
 | `plan` | A prioritised build plan: buy (what the inventory lacks), test on a breadboard, print in batches, solder, assemble, flash, with dependencies and "what's next" |
 | `cad-validation` | Buildability rules for the designer, plus **cadkit**: walls, mesh, export, screws along their axes, fits, clashes, bought-part clearances, access paths, motion sweeps |
@@ -25,7 +29,8 @@ Status: it works on one Windows setup (FreeCAD 1.1, Bambu Lab P1S, PLA). See
 | `print-settings` | A Bambu Studio settings sheet, issued only when the gate is open |
 | `bom` | A bill of materials worked out from the geometry |
 | Stop hook | If STLs were written without a current report, Claude must validate before it stops |
-| Start hook | A session opened in a project folder gets the project's phase, gate and next step |
+| Compile hook | After every edit to a sketch file or project.yaml, `pins.h` is regenerated and the sketch compiled; a failed compile goes back to Claude |
+| Start hook | A session opened in a project folder gets the project's phase, gate, next step, last log entry and open problems |
 | Prompt hook | Mentioning a filament your profile has no tolerances for gives Claude a reminder of what to calibrate |
 
 Every check ends as PASS, FAIL, WARNING or NOT TESTED. The verdict is one of
@@ -49,6 +54,7 @@ use a local checkout instead: `/plugin marketplace add C:/path/to/cadkit`.
   It brings Python, numpy and PyYAML.
 - Node.js 18 or newer.
 - Optional: Bambu Studio 2.x, for `cadkit slice`.
+- Optional: arduino-cli, for the firmware skill. Arduino IDE 2 ships one, and it is found automatically.
 
 ## First-time setup
 
@@ -109,6 +115,8 @@ node <projkit>/projkit.mjs check  path/to/my-project     # FAIL / WARNING / NOT 
 node <projkit>/projkit.mjs status path/to/my-project     # one line
 node <projkit>/projkit.mjs plan   path/to/my-project     # build steps in order, what to buy, what's next
 node <projkit>/projkit.mjs wiring path/to/my-project --write  # WIRING.md: table per part + Mermaid diagram
+node <projkit>/projkit.mjs bringup path/to/my-project --write # BRINGUP.md: power-up checklist
+node <projkit>/projkit.mjs log    path/to/my-project "text" --kind measured   # LOG.md
 node <projkit>/projkit.mjs needs  path/to/my-project     # components as an inventory project file
 ```
 
@@ -141,6 +149,8 @@ profile.
 
 ```text
 node skills/cad-validation/cadkit/tests/run_tests.mjs
+node skills/enclosure/encl/tests/run_tests.mjs     # layout: placement, openings, sizes
+node skills/firmware/fwkit/tests/run_tests.mjs      # pins.h, lint, compile (skipped without arduino-cli)
 node skills/project/projkit/tests/run_tests.mjs     # project file: pins, power, wiring rules, gates, plan order
 ```
 

@@ -71,7 +71,8 @@ Steps that do not depend on each other can run in parallel: give them the same
 
 ## When a step is done
 
-Set `done: true` on it (and note measured values or decisions in `decisions`).
+Set `done: true` on it, log it (`projkit log ... --kind done`, readings as `measured`), and put
+decisions in `decisions`. For a `test` step on the breadboard, the bringup skill has the checklist.
 Run `plan` again and tell the user what is next. If reality changed the plan
 (a part did not fit, a module died), change the steps, don't just tick them.
 

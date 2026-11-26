@@ -16,7 +16,7 @@ export const ROOT = path.resolve(KIT, '..', '..', '..'); // plugin root: skills/
 const ENV = {
   freecadcmd: 'CADKIT_FREECADCMD', bambu_studio: 'CADKIT_BAMBU', bambu_presets: 'CADKIT_BAMBU_PRESETS',
   tolerances: 'CADKIT_TOLERANCES', inventory_hardware: 'CADKIT_INVENTORY_HARDWARE',
-  inventory_cli: 'CADKIT_INVENTORY_CLI', projects: 'CADKIT_PROJECTS',
+  inventory_cli: 'CADKIT_INVENTORY_CLI', projects: 'CADKIT_PROJECTS', arduino_cli: 'CADKIT_ARDUINO_CLI',
 };
 
 export function configFile() {
@@ -62,6 +62,16 @@ function detectBambu() {
     '/Applications/BambuStudio.app/Contents/MacOS/BambuStudio']);
 }
 
+function detectArduinoCli() {
+  const exe = process.platform === 'win32' ? 'arduino-cli.exe' : 'arduino-cli';
+  const onPath = (process.env.PATH || '').split(path.delimiter).map((d) => path.join(d, exe));
+  const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const bundled = 'resources/app/lib/backend/resources/' + exe; // the CLI that ships inside Arduino IDE 2
+  return firstExisting([...onPath, path.join(local, 'Programs', 'Arduino IDE', bundled),
+    ...[process.env.ProgramFiles, 'C:/Program Files'].filter(Boolean).map((r) => path.join(r, 'Arduino IDE', bundled)),
+    '/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli']);
+}
+
 function detectPresets() {
   const appdata = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
   return firstExisting([path.join(appdata, 'BambuStudio', 'system', 'BBL'),
@@ -79,6 +89,7 @@ export function loadConfig() {
   cfg.freecadcmd ||= detectFreecad();
   cfg.bambu_studio ||= detectBambu();
   cfg.bambu_presets ||= detectPresets();
+  cfg.arduino_cli ||= detectArduinoCli();
   return cfg;
 }
 

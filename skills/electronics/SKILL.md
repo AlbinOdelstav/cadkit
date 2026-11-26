@@ -100,6 +100,8 @@ Write `power.source` (part, `v`, `max_ma`) and `power.notes` for the design choi
    choices in `decisions`, and check again. With the gate OPEN: set
    `phase: cad` (or `firmware` if nothing is printed), and update `next_step`.
    With many parts, suggest `/plan`: the breadboard test comes before soldering.
+   The code comes next with `/firmware`, which builds `pins.h` from these pins, and
+   the box with `/enclosure`, which needs a `cad:` or measured `dims_mm` per part.
 
 ## Never
 
