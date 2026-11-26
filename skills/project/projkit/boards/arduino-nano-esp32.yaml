@@ -1,0 +1,59 @@
+# Pin table for the project check. Pins use the Arduino names on the header: D0-D13, A0-A7.
+# The core defines D2, A0 ... in BOTH numbering modes ("By Arduino pin" = default, and
+# "By GPIO number"), but they are different numbers in each, so pins.h writes the names
+# (PIN_X = D5), never the raw number: then it is right in either mode.
+# Extra capability tags: strapping (sampled at reset), adc2 (no analogRead with Wi-Fi on).
+id: arduino-nano-esp32
+name: Arduino Nano ESP32 (ABX00083, ESP32-S3)
+fqbn: arduino:esp32:nano_nora
+logic_v: 3.3
+pins_h: names                 # pins.h uses the pin names (D5, A0), see above
+usb_native: true              # Serial is the chip's own USB (cdc_on_boot=1): D0/D1 are free
+sources:
+  - "Board variant of the core, variants/arduino_nano_nora/pins_arduino.h (D/A -> GPIO in both numbering modes, LED_BUILTIN, SDA/SCL, SPI, RX/TX): https://github.com/espressif/arduino-esp32/blob/master/variants/arduino_nano_nora/pins_arduino.h"
+  - "boards.txt nano_nora: build.mcu=esp32s3, cdc_on_boot=1 (Serial on native USB), menu PinNumbers default = By Arduino pin, byGPIONumber = -DBOARD_USES_HW_GPIO_NUMBERS: https://github.com/espressif/arduino-esp32/blob/master/boards.txt"
+  - "ABX00083 datasheet (VIN 6-21 V recommended; MP2322GQH step-down to 3.3 V; 3.3 V I/O, not 5 V tolerant): https://docs.arduino.cc/resources/datasheets/ABX00083-datasheet.pdf"
+  - "Nano ESP32 cheat sheet (VIN 5-18 V to protect the MP2322GQH; the more conservative figure): https://docs.arduino.cc/tutorials/nano-esp32/cheat-sheet"
+  - "ESP32-S3 datasheet: strapping pins GPIO0, GPIO3, GPIO45, GPIO46; ADC1 = GPIO1-10, ADC2 = GPIO11-20: https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf"
+pins:
+  # header name: capabilities                       # ESP32-S3 GPIO, role
+  D0:  [digital, pwm, interrupt, uart]              # GPIO44, RX (Serial0; USB is separate)
+  D1:  [digital, pwm, interrupt, uart]              # GPIO43, TX (Serial0)
+  D2:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO5
+  D3:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO6
+  D4:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO7
+  D5:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO8
+  D6:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO9
+  D7:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO10
+  D8:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO17
+  D9:  [digital, pwm, interrupt, i2c, spi, uart]    # GPIO18
+  D10: [digital, pwm, interrupt, i2c, spi, uart]    # GPIO21, SPI SS
+  D11: [digital, pwm, interrupt, i2c, spi, uart]    # GPIO38, SPI MOSI
+  D12: [digital, pwm, interrupt, i2c, spi, uart]    # GPIO47, SPI MISO
+  D13: [digital, pwm, interrupt, i2c, spi, uart]    # GPIO48, SPI SCK, LED_BUILTIN
+  A0:  [digital, pwm, interrupt, analog, i2c, spi, uart]             # GPIO1, ADC1
+  A1:  [digital, pwm, interrupt, analog, i2c, spi, uart]             # GPIO2, ADC1
+  A2:  [digital, pwm, interrupt, analog, i2c, spi, uart, strapping]  # GPIO3, ADC1
+  A3:  [digital, pwm, interrupt, analog, i2c, spi, uart]             # GPIO4, ADC1
+  A4:  [digital, pwm, interrupt, analog, adc2, i2c, spi, uart]       # GPIO11, ADC2, SDA
+  A5:  [digital, pwm, interrupt, analog, adc2, i2c, spi, uart]       # GPIO12, ADC2, SCL
+  A6:  [digital, pwm, interrupt, analog, adc2, i2c, spi, uart]       # GPIO13, ADC2
+  A7:  [digital, pwm, interrupt, analog, adc2, i2c, spi, uart]       # GPIO14, ADC2
+power_pins:
+  3V3: {rail: 3v3}
+  VIN: {rail: vin}                                  # 6-21 V in (datasheet), 5-18 V (cheat sheet)
+  VBUS: {rail: vbus}                                # USB 5 V, only when USB is plugged in
+  GND: {rail: gnd}
+buses:
+  i2c: {sda: A4, scl: A5}
+  spi: {ss: D10, mosi: D11, miso: D12, sck: D13}
+  uart: {rx: D0, tx: D1}                            # Serial0; Serial itself is the native USB
+limits:
+  pin_ma: 20                    # conservative: the ESP32-S3 sources ~40 mA, sinks ~28 mA per pin
+  rail_ma:
+    3v3: 300                    # conservative: the MP2322GQH also feeds the ESP32-S3 (Wi-Fi peaks)
+notes:
+  strapping: it is GPIO3, a strapping pin of the ESP32-S3 (JTAG source select, read at reset). Usually harmless, but nothing should pull it hard at power-up.
+  adc2: it is an ADC2 pin (GPIO11-20). analogRead does not work while Wi-Fi is on; use A0-A3 (ADC1) for analog reads with Wi-Fi.
+pin_notes:
+  D13: the on-board LED (LED_BUILTIN) is on this pin.

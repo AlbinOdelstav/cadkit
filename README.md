@@ -121,8 +121,10 @@ node <projkit>/projkit.mjs needs  path/to/my-project     # components as an inve
 ```
 
 `<projkit>` is `<plugin>/skills/project/projkit`. Pin checks need a pin table
-for the board in `projkit/boards/`: Arduino Uno, Arduino Nano and ESP32 DevKit V1 /
-DevKitC (ESP32-WROOM-32) are included. On the ESP32 the check also fails
+for the board in `projkit/boards/`: Arduino Uno, Arduino Nano, Arduino Nano ESP32
+(ESP32-S3) and ESP32 DevKit V1 / DevKitC (ESP32-WROOM-32) are included. On the Nano
+ESP32, `pins.h` uses the core's pin names (`D5`, `A0`), which are right in both of
+its pin-numbering modes. On the ESP32 the check also fails
 outputs on input-only GPIO34-39 and any use of the flash pins GPIO6-11, and
 warns on strapping pins (0, 2, 5, 12, 15) and on analog reads from ADC2 pins
 (no analogRead with Wi-Fi on). ESP32 pins are named `GPIO4`; `IO4`, `G4` and

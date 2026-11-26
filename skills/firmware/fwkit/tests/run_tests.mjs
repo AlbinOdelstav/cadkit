@@ -24,6 +24,8 @@ t('pins.h: baud', /SERIAL_BAUD = 115200;/.test(h));
   const esp = { p: { project: 'x', pins: [{ pin: 'IO4', to: 'led.k' }, { pin: 'G23', to: 'btn.a' }] }, board: loadBoard('esp32-devkit-v1'), baud: 115200 };
   const eh = pinsHeader(esp);
   t('pins.h: ESP32 pin names (IO4, G23) become GPIO numbers', /PIN_LED_K = 4;/.test(eh) && /PIN_BTN_A = 23;/.test(eh));
+  const nh = pinsHeader({ p: { project: 'x', pins: [{ pin: 'D5', to: 'drv.step' }, { pin: 'A0', to: 'drv.diag' }] }, board: loadBoard('arduino-nano-esp32'), baud: 115200 });
+  t('pins.h: Nano ESP32 keeps the names (D5, A0), right in both numbering modes', /PIN_DRV_STEP = D5;/.test(nh) && /PIN_DRV_DIAG = A0;/.test(nh));
 }
 
 const orig = fs.readFileSync(INO, 'utf8');

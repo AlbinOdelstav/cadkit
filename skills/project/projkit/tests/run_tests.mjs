@@ -144,6 +144,28 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   t('pilot: ASSUMED currents in one warning line', assumed.results.filter((x) => /ASSUMED/.test(x.msg)).length === 1);
 }
 
+// Arduino Nano ESP32: native USB (D0/D1 free), A2 strapping, ADC2 on A4-A7
+{
+  const nano = {
+    ...load(F('esp32-weather')), controller: 'n',
+    components: [
+      { id: 'n', part: 'Arduino Nano ESP32', status: 'DECIDED', type: 'controller', board: 'arduino-nano-esp32', power: { v: 12, logic_v: 3.3, ma: 100, src: 'DATASHEET' } },
+      { id: 'd', part: 'TMC2209', status: 'DECIDED', type: 'driver', power: { v: 12, logic_v: 3.3, ma: 5, src: 'DATASHEET' } },
+      { id: 'ldr', part: 'LDR divider', status: 'DECIDED', type: 'sensor', needs: ['analog'], power: { v: 3.3, logic_v: 3.3, ma: 1, src: 'DATASHEET' } },
+    ],
+    pins: [{ pin: 'D0', to: 'd.pdn_uart', as: 'uart' }, { pin: 'D2', to: 'd.step' }, { pin: 'GND', to: ['d.gnd', 'ldr.gnd'] }, { pin: '3V3', to: ['d.vio', 'ldr.vcc'] }, { pin: 'A0', to: 'ldr.ao' }],
+    wires: [], power: { source: { part: 'USB', v: 5, max_ma: 500 } }, functions: [{ id: 'x', kind: 'sense', what: 'x', by: ['ldr'] }], plan: 'none',
+  };
+  const r = check(nano);
+  t('nano esp32: D0/D1 are not the USB serial port (native USB)', !r.results.some((x) => /D0: .*serial|USB serial/i.test(x.msg)));
+  t('nano esp32: clean wiring passes', r.ok && has(r, 'PASS', /connections on arduino-nano-esp32/));
+  const v = (pin, to) => check({ ...nano, pins: nano.pins.map((e) => (e.to === to ? { ...e, pin } : e)) });
+  t('nano esp32: A2 (GPIO3) is a strapping pin', has(v('A2', 'd.step'), 'WARNING', /A2 .*GPIO3, a strapping pin/));
+  t('nano esp32: analog read on A4 (ADC2) warns about Wi-Fi', has(v('A4', 'ldr.ao'), 'WARNING', /A4: .*ADC2/));
+  t('nano esp32: analog read on A0 (ADC1) does not', !v('A0', 'ldr.ao').results.some((x) => /ADC2/.test(x.msg)));
+  t('nano esp32: D14 does not exist', has(v('D14', 'd.step'), 'FAIL', /D14 does not exist on arduino-nano-esp32/));
+}
+
 // design steps (found in the pilot): they create parts, a print comes after them
 {
   const base = { components: [], plan: [

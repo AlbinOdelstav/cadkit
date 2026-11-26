@@ -61,7 +61,10 @@ export function pinsHeader(P) {
     if (['GND', '5V', '3V3', 'VIN'].includes(pin)) continue;
     const [cid, sig] = to.split('.');
     if (['sda', 'scl'].includes(str(sig).toLowerCase())) { i2c.push(`//   ${to} on ${pin} (Wire uses it by default)`); continue; }
-    const val = /^D\d+$/.test(pin) ? pin.slice(1) : /^GPIO\d+$/.test(pin) ? pin.slice(4) : pin; // A0 stays A0
+    // boards with pins_h: names (Nano ESP32) get the core's own names (D5, A0): the number
+    // behind them depends on the board's pin-numbering mode
+    const val = board && board.pins_h === 'names' ? pin
+      : /^D\d+$/.test(pin) ? pin.slice(1) : /^GPIO\d+$/.test(pin) ? pin.slice(4) : pin; // A0 stays A0
     lines.push(`constexpr uint8_t PIN_${ident(cid)}_${ident(sig)} = ${val};   // ${pin} -> ${to}`);
   }
   if (i2c.length) lines.push('', '// I2C:', ...i2c);

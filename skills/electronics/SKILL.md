@@ -36,8 +36,11 @@ For each function in `project.yaml` without a `by`:
 Nano when it has to be small. Mega only when pins or memory run out. ESP32 for
 Wi-Fi/Bluetooth (DevKit V1 / DevKitC: `board: esp32-devkit-v1`), but it is 3.3 V
 logic: 5 V parts need a level shifter, GPIO34-39 are inputs only, GPIO6-11 are
-the flash, and strapping / ADC2 pins get warnings. Other ESP32 boards (S2, S3,
-C3) have no pin table yet, so say that pin checks will be NOT TESTED.
+the flash, and strapping / ADC2 pins get warnings. For Wi-Fi in a small box the
+**Arduino Nano ESP32** (`board: arduino-nano-esp32`, ESP32-S3) is often the better pick:
+VIN takes 6-21 V straight from a 12 V adapter, Serial is native USB so D0/D1 are free,
+and there are no input-only pins; it is 3.3 V logic too. Other ESP32 boards (S2, C3,
+other S3 boards) have no pin table yet, so say that pin checks will be NOT TESTED.
 
 ## 2. Datasheet numbers, not memory
 

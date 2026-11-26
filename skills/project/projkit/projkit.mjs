@@ -181,7 +181,8 @@ export function check(p, file = '') {
     const bus = board.buses || {};
     const i2cPins = new Set(Object.values(bus.i2c || {}).map((x) => normPin(x, board)));
     // the USB serial pins: tagged usb_serial when the board has that tag, else every uart pin (AVR)
-    const serialTag = Object.values(board.pins || {}).some((c) => c.includes('usb_serial')) ? 'usb_serial' : 'uart';
+    // (none on boards whose USB is native to the chip, usb_native: true)
+    const serialTag = board.usb_native ? null : Object.values(board.pins || {}).some((c) => c.includes('usb_serial')) ? 'usb_serial' : 'uart';
     const bnote = (k, pin) => (board.pin_notes && board.pin_notes[pin]) || (board.notes && board.notes[k]) || '';
     // is this use an input (the controller only reads it)? analog reads, buttons, `as: input|analog`,
     // and component signals that are outputs of the part (out, echo, miso, int ...)
