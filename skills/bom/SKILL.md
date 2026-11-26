@@ -11,6 +11,8 @@ printer) that also need bought hardware and sometimes electronics. They want
 one list of everything, to check against what they have and to buy the
 rest, **before** they find the missing M3 × 20 halfway through assembly.
 
+`<skill dir>` below is this skill's base directory, shown when the skill loads.
+
 **Your stance: derive, don't remember.** Every quantity and length comes from
 the current version's geometry, build report or a decision the user has made.
 A screw length "by habit" has shipped wrong before (cad-validation:
@@ -38,7 +40,15 @@ Every row gets a **status**:
 
 ## Step 1: Gather the sources
 
-For the version folder (the current one per the project's memory or README):
+First the project file, if there is one (`project.yaml` in the project root, see
+the `project` skill): it already holds the decided electronics. `components`
+(part, qty, status, inventory link), `power` (supply, regulators, capacitors in
+`power.notes`), `wires` and `pins` (wire count, connectors), `mechanics.cad`
+(which version folder is current) and the `plan` (buy steps). Use it; do not
+work the electronics out again. If the BOM finds something project.yaml lacks
+(a flyback diode, a resistor, a connector), add it there too.
+
+Then, for the version folder (`mechanics.cad`, or the current one per the project's memory or README):
 
 - `params.py`: screw lengths, pilot/clearance, bought-part dimensions
 - `*/build_report.txt`: print list (qty, grams), fastener checks, and the
@@ -92,7 +102,14 @@ part, at the split's own recursion level.
   = part + 0.1 to 0.2), panels, wire, springs, bearings, feet.
 - **Motion:** motors and servos. Quantity, and the exact variant (e.g. a
   single- or dual-shaft TT gear motor). Link to the measured values.
-- **Electronics:** derive the **needs** from the design: number of actuators
+- **Electronics:** with a project.yaml, one row per component: its `part`, `qty`,
+  and status from the component's (`DECIDED` / `OWNED` / `BOUGHT` → DECIDED,
+  `CANDIDATE` → ASSUMED with "candidate, not decided"). Add what the circuit
+  needs but nobody lists as a part: LED resistors (`resistor_ohm`), capacitors and
+  diodes from `power.notes`, headers, jumper wires or hook-up wire (count from
+  `pins` + `wires`), a barrel jack or battery holder for `power.source`.
+  `projkit check` must have no FAIL first: a BOM for wrong wiring buys wrong parts.
+  Without a project.yaml, derive the **needs** from the design: number of actuators
   and their direction (one-way or reversing?), number of inputs (buttons,
   sensors), voltage, rough current (stall!), one-at-a-time or
   simultaneous. If the circuit is not designed, write NOT DESIGNED and give 1
@@ -112,7 +129,15 @@ part, at the split's own recursion level.
 
 ## Step 5: Check against what the user has
 
-Only if an `inventory` skill is installed (a separate inventory tool, not part
+With a project.yaml and `inventory_cli` in the cadkit config:
+`node <skill dir>/../project/projkit/projkit.mjs plan <project>` checks the
+components against the stock and lists what is MISSING or SHORT, and
+`projkit needs <project>` gives them in the inventory's project format. Add the
+BOM rows that are not components (screws, filament grams, consumables) to that
+needs file and run the inventory `check` on it. The buy steps in the project's
+`plan` must then match the BUY rows; tell the user if they differ.
+
+Otherwise, only if an `inventory` skill is installed (a separate inventory tool, not part
 of this plugin): follow it
 to write the rows as needs to a project file (it says where the tool and data
 live), run its `check`, and mark each BOM row HAVE / BUY in `BOM.md`. The

@@ -137,5 +137,20 @@ t('normPin', normPin('9') === 'D9' && normPin('d09') === 'D9' && normPin('a0') =
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+// a purchase updates the inventory through its CLI (a fake one here)
+{
+  const { recordPurchase } = await import('../projkit.mjs');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'projkit-inv-'));
+  const cli = path.join(tmp, 'inv.mjs');
+  fs.writeFileSync(cli, "const [, , cmd, id, d] = process.argv; if (cmd !== 'adjust' || id !== 'arduino-uno') { console.error('no item'); process.exit(1); } console.log(JSON.stringify({ id, before: 1, after: 1 + Number(d), unit: 'pcs' }));\n");
+  const p = load(F('robot-plan'));
+  const ok = recordPurchase(p, 'uno', 2, cli);
+  t('bought: inventory adjusted by the component qty', ok.ok && /arduino-uno 1 -> 3 pcs/.test(ok.msg));
+  t('bought: component without inventory id explains what to do', /mega has no inventory: \{id/.test(recordPurchase(p, 'mega', null, cli).msg));
+  t('bought: unknown component refused', !recordPurchase(p, 'nope', null, cli).ok);
+  t('bought: no inventory_cli is said, not hidden', /inventory_cli is not set/.test(recordPurchase(p, 'uno', 1, null).msg));
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nall passed');
 process.exit(failed ? 1 : 0);

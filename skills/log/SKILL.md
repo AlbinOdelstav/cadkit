@@ -28,6 +28,10 @@ Kinds: `note` · `done` · `measured` · `problem` · `fixed` · `decided` · `b
   key words, so `log` can tell which problems are still open.
 - **done**: plan steps finished (also set `done: true` in the plan).
 - **printed** (part, material, grams, settings that mattered) and **bought** (part, shop, price).
+  For a project component add `--item <component id> [--qty n]`: the inventory gets the
+  stock (through `inventory_cli`), then set the component's `status: BOUGHT`. A part that is
+  new to the inventory has no `inventory: {id}` yet: add it with the inventory skill first,
+  then write its id into project.yaml. Filament used for a print: `inv.mjs adjust <filament id> -<grams>`.
 - **decided**: also write it in `project.yaml` `decisions`; the log entry says when.
 
 One fact per entry, short, specific. Never log guesses as measurements.

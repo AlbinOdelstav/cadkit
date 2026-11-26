@@ -584,6 +584,21 @@ export function stockFromInventory(p, cli) {
   return out;
 }
 
+// A bought component: add it to the inventory (inventory_cli `adjust <id> +n`).
+// Only for components with inventory: {id: ...}; a match or nothing cannot say which row to change.
+export function recordPurchase(p, componentId, qty = null, cli = loadConfig().inventory_cli) {
+  const c = list(p.components).find((x) => str(x.id) === componentId);
+  if (!c) return { ok: false, msg: `"${componentId}" is not a component id in project.yaml` };
+  const n = qty || Number(c.qty) || 1;
+  const invId = c.inventory && c.inventory.id;
+  if (!cli || !fs.existsSync(cli)) return { ok: false, msg: 'inventory not updated: inventory_cli is not set in the cadkit config' };
+  if (!invId) return { ok: false, msg: `inventory not updated: ${componentId} has no inventory: {id: ...}. If it is a new item, add it with the inventory skill (or the app), then set inventory: {id: <its id>} and status: BOUGHT` };
+  const r = spawnSync(process.execPath, [cli, 'adjust', str(invId), `+${n}`, '--json'], { encoding: 'utf8' });
+  if (r.status !== 0) return { ok: false, msg: `inventory not updated: ${str(r.stderr || r.stdout)}` };
+  let j = {}; try { j = JSON.parse(r.stdout); } catch { /* text */ }
+  return { ok: true, msg: `inventory: ${invId} ${j.before ?? '?'} -> ${j.after ?? '?'} ${j.unit || ''}. Set ${componentId} to status: BOUGHT in project.yaml` };
+}
+
 export function toNeeds(p) {
   const needs = [];
   for (const c of list(p.components)) {
@@ -680,7 +695,17 @@ ${note}`);
     const [f, p] = readOr2(arg);
     const L = await import('./log.mjs');
     const text = rest.filter((x, i) => !x.startsWith('--') && !(i > 0 && rest[i - 1] === '--kind')).join(' ').trim();
-    if (text) { const kind = typeof flag('--kind') === 'string' ? flag('--kind') : 'note'; try { console.log(`logged in ${L.append(f, p, text, kind)}`); } catch (e) { console.error(e.message); process.exit(2); } }
+    if (text) {
+      const kind = typeof flag('--kind') === 'string' ? flag('--kind') : 'note';
+      try { console.log(`logged in ${L.append(f, p, text, kind)}`); } catch (e) { console.error(e.message); process.exit(2); }
+      // a purchase of a project component goes into the inventory too
+      const item = flag('--item');
+      if (kind === 'bought' && typeof item === 'string') {
+        const r = recordPurchase(p, item, Number(flag('--qty')) || null);
+        console.log(r.msg);
+        if (!r.ok) process.exitCode = 1;
+      } else if (kind === 'bought') console.log('tip: --item <component id> [--qty n] also adds it to the inventory');
+    }
     else {
       const es = L.entries(f);
       for (const e of es.slice(-Number(flag('--last') || 15))) console.log(`${e.day} ${e.time} ${e.kind.padEnd(8)} (${e.phase}) ${e.text}`);
