@@ -17,6 +17,7 @@ node <skill dir>/projkit/projkit.mjs new <folder> [--title "..."]
 node <skill dir>/projkit/projkit.mjs check <folder>     # FAIL / WARNING / NOT TESTED / PASS + the phase gate
 node <skill dir>/projkit/projkit.mjs status <folder>    # one line
 node <skill dir>/projkit/projkit.mjs plan <folder>      # build order + stock (see the plan skill)
+node <skill dir>/projkit/projkit.mjs wiring <folder> --write   # WIRING.md: table per part + diagram
 node <skill dir>/projkit/projkit.mjs needs <folder>     # components as an inventory project file
 node <skill dir>/projkit/projkit.mjs boards             # boards with a pin table
 ```
@@ -41,6 +42,8 @@ The format, with a comment on every field: `<skill dir>/projkit/templates/projec
 - `pins` lists both signal pins (`D5 -> driver.pwma`) and power pins
   (`5V -> servo.vcc`), so the check can add up what hangs on the board's own
   5V/3V3 pins. A motor or servo on the board's 5V pin is the classic brown-out.
+  `wires` holds every other connection (driver → motor, `supply.gnd` → `board.GND`),
+  so the check can follow grounds and supply voltages. `wiring --write` makes `WIRING.md`.
 - A board with no file in `projkit/boards/` gets no pin checks. Add a pin table
   (copy `arduino-uno.yaml`, cite the source) rather than skipping it.
 

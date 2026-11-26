@@ -59,10 +59,21 @@ components: none              # or a list:
   #   dims_mm: none             # [l, w, h] rough box when there is no CAD file: {v: [..], src: ASSUMED}
   #   power: {v: 5, logic_v: 5, ma: 50, peak_ma: 50, src: DATASHEET}   # src: DATASHEET | MEASURED | ASSUMED
   #   needs: [digital]          # digital | analog | pwm | interrupt | i2c | spi | uart
+  #   type: controller          # controller | sensor | input | button | display | led | led-strip | motor | pump |
+  #                             # solenoid | relay | servo | stepper | driver | module | buzzer | power | passive
+  #   datasheet: none           # link to where the power numbers came from
+  # optional, by type:  pullup: internal | external (buttons) · resistor_ohm: 220 (LEDs) · i2c_addr: 0x3C
 
-pins: none                    # controller pin -> component signal, or a list:
+pins: none                    # controller pin -> component signal (signal AND power pins), or a list:
   # - {pin: A0, to: moisture.sig}
   # - {pin: D9, to: servo.sig}
+  # - {pin: 5V, to: moisture.vcc}
+  # - {pin: GND, to: moisture.gnd}
+
+wires: none                   # every connection NOT on the controller: component <-> component, or supply.<signal>
+  # - {from: supply.5v, to: servo.vcc}
+  # - {from: supply.gnd, to: board.GND, note: common ground}
+  # - {from: driver.out1, to: pump.+}
 
 power: none                   # or:
   # source: {part: "5 V 2 A USB adapter", v: 5, max_ma: 2000}

@@ -5,6 +5,7 @@
 //   node projkit.mjs check <folder|file> [--json]   sections, references, pins, power budget, phase gates
 //   node projkit.mjs status <folder|file>            one line: phase, gate, next step
 //   node projkit.mjs plan <folder|file> [--json]    build steps in order, what is next, what to buy
+//   node projkit.mjs wiring <folder|file> [--write [F]] wiring tables + Mermaid diagram (default WIRING.md)
 //   node projkit.mjs needs <folder|file> [--write F] the components as an inventory project file
 //   node projkit.mjs boards                          the pin tables in boards/
 //
@@ -35,7 +36,7 @@ const PLACEHOLDERS = [/^My project$/i, /^What is annoying, missing or fun\?/i, /
 
 const isNone = (v) => v === undefined || v === null || v === 'none' || (Array.isArray(v) && v.length === 0);
 const list = (v) => (isNone(v) ? [] : Array.isArray(v) ? v : [v]);
-const str = (v) => (v === undefined || v === null ? '' : String(v).trim());
+const str = (v) => (v === undefined || v === null ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v).trim());
 const placeholder = (v) => PLACEHOLDERS.some((re) => re.test(str(v)));
 
 export function resolveFile(arg) {
@@ -115,6 +116,7 @@ export function check(p, file = '') {
     if (byId.has(id)) FAIL('components', `duplicate component id "${id}"`);
     byId.set(id, c);
     if (!str(c.part)) FAIL('components', `${id}: no part`);
+    else if ((str(c.part).match(/\(/g) || []).length !== (str(c.part).match(/\)/g) || []).length) WARN('components', `${id}: part "${c.part}" looks cut off: a comma inside {...} needs quotes around the name`);
     if (!STATUSES.includes(str(c.status))) FAIL('components', `${id}: status "${str(c.status)}" is not one of ${STATUSES.join(' | ')}`);
     for (const n of list(c.needs)) if (!CAPS.includes(str(n))) WARN('components', `${id}: unknown need "${n}"`);
   }
@@ -203,7 +205,7 @@ export function check(p, file = '') {
   for (const c of comps) {
     const pw = c.power || {};
     const ma = Number(pw.peak_ma ?? pw.ma);
-    if (!Number.isFinite(ma)) { known = false; noData.push(c.id); continue; }
+    if (!Number.isFinite(ma)) { if (!['button', 'passive'].includes(str(c.type))) { known = false; noData.push(c.id); } continue; }
     total += ma * (Number(c.qty) || 1);
     if (str(pw.src) === 'ASSUMED') WARN('power', `${c.id}: ${ma} mA is ASSUMED - check the datasheet`);
     const lv = Number(pw.logic_v);
@@ -238,6 +240,9 @@ export function check(p, file = '') {
     }
   }
 
+  // --- electrical rules over every connection (board pins + wires)
+  for (const r of electrical(p, { comps, byId, ctrlId, board })) R.push(r);
+
   // --- build plan (order only; stock is checked by `plan`)
   if (!isNone(p.plan)) for (const r of plan(p).results) if (r.level !== 'INFO') R.push(r);
 
@@ -253,7 +258,7 @@ export function check(p, file = '') {
       ...(unsolved.length ? [`functions not solved: ${unsolved.join(', ')}`] : []),
       ...comps.filter((c) => str(c.status) === 'CANDIDATE').map((c) => `${c.id} is still a CANDIDATE`),
       ...(comps.length && (!src || isNone(src)) ? ['no power source'] : []),
-      ...R.filter((r) => r.level === 'FAIL' && ['pins', 'power', 'controller', 'components'].includes(r.area)).map((r) => r.msg),
+      ...R.filter((r) => r.level === 'FAIL' && ['pins', 'power', 'wiring', 'controller', 'components'].includes(r.area)).map((r) => r.msg),
       ...blocking('electronics').map((q) => `open question: ${q}`),
     ],
     cad: [
@@ -283,6 +288,146 @@ export function check(p, file = '') {
   const gate = phase === 'paused' || phase === 'done' ? null
     : { from: phase, to: next, open: current.length === 0, blockers: current };
   return finish(R, p, gate);
+}
+
+// ---------------------------------------------------------------------------
+// Connections: `pins` (board pin <-> component.signal) and `wires` (anything else:
+// component.signal <-> component.signal, or supply.<signal> for power.source).
+const VCC = /^(vcc|vdd|v\+|vin|vm|vmot|5v|3v3|\+|\+5v|\+12v|pwr|power|red)$/i;
+const GND = /^(gnd|-|v-|0v|black)$/i;
+const INDUCTIVE = ['motor', 'pump', 'solenoid', 'relay'];
+export const TYPES = ['controller', 'sensor', 'input', 'button', 'display', 'led', 'led-strip', 'motor', 'pump',
+  'solenoid', 'relay', 'servo', 'stepper', 'driver', 'module', 'buzzer', 'power', 'passive'];
+
+export function connections(p) {
+  const out = [];
+  for (const e of list(p.pins)) out.push({ a: `board.${normPin(e.pin)}`, b: str(e.to), how: 'pin' });
+  for (const w of list(p.wires)) out.push({ a: str(w.from), b: str(w.to), how: 'wire', note: str(w.note) });
+  return out;
+}
+
+function electrical(p, { comps, byId, ctrlId, board }) {
+  const R = [];
+  const add = (level, msg) => R.push({ level, area: 'wiring', msg });
+  const conns = connections(p);
+  const isNet = (end) => end.startsWith('board.') || end.startsWith('supply.');
+  for (const w of list(p.wires)) {
+    for (const end of [str(w.from), str(w.to)]) {
+      const [cid, sig] = end.split('.');
+      if (!sig) add('FAIL', `wire end "${end}" is not component.signal (or supply.<signal>)`);
+      else if (cid !== 'supply' && cid !== 'board' && !byId.has(cid)) add('FAIL', `wire end "${end}": "${cid}" is not a component id`);
+      if (cid === 'board' && board && !(board.pins[normPin(sig)] || board.power_pins[normPin(sig)])) add('FAIL', `wire end "${end}": ${normPin(sig)} does not exist on ${board.id}`);
+      if (cid === 'supply' && isNone(p.power && p.power.source)) add('FAIL', `wire end "${end}" uses supply, but power.source is none`);
+    }
+  }
+  for (const c of comps) if (c.type !== undefined && !TYPES.includes(str(c.type))) add('WARNING', `${c.id}: unknown type "${c.type}" (one of ${TYPES.join(', ')})`);
+
+  // ground nets: union-find; all gnd-like signals of one component (and the board's GND) are one node
+  const parent = new Map();
+  const node = (end) => {
+    const [cid, sig] = end.split('.');
+    if (cid === 'board') return normPin(sig) === 'GND' ? 'GND:board' : `board.${normPin(sig)}`;
+    if (cid === ctrlId && GND.test(sig || '')) return 'GND:board';
+    return GND.test(sig || '') ? `GND:${cid}` : end;
+  };
+  const find = (x) => { while (parent.has(x) && parent.get(x) !== x) x = parent.get(x); return x; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
+  for (const k of conns) union(node(k.a), node(k.b));
+  const groundOk = (cid) => find(`GND:${cid}`) === find('GND:board');
+
+  const talksToBoard = (cid) => conns.some((k) => k.how === 'pin' && k.b.split('.')[0] === cid && !(board && board.power_pins[k.a.slice(6)]));
+  const usesSupply = conns.some((k) => k.a.startsWith('supply.') || k.b.startsWith('supply.'));
+  if (usesSupply && board && find('GND:supply') !== find('GND:board')) add('FAIL', 'the supply\'s gnd is not connected to the board\'s GND: signals have no common reference');
+
+  const RAIL_V = { '5v': 5, '3v3': 3.3 };
+  for (const c of comps) {
+    const id = str(c.id);
+    if (id === ctrlId || str(c.type) === 'passive') continue;
+    const mine = conns.filter((k) => k.a.split('.')[0] === id || k.b.split('.')[0] === id);
+    if (!mine.length) continue;
+    const sigOf = (k) => (k.a.split('.')[0] === id ? k.a : k.b).split('.')[1] || '';
+    const other = (k) => (k.a.split('.')[0] === id ? k.b : k.a);
+    const hasPower = mine.some((k) => VCC.test(sigOf(k)));
+    const hasGnd = mine.some((k) => GND.test(sigOf(k)));
+    const powered = c.power && (c.power.v !== undefined || c.power.ma !== undefined);
+    if (powered && !hasPower && !['led', 'button'].includes(str(c.type))) add('WARNING', `${id}: no supply connection (vcc / v+ / vin ...): how is it powered?`);
+    if (powered && !hasGnd) add('FAIL', `${id}: no gnd connection`);
+    else if (talksToBoard(id) && !groundOk(id)) add('FAIL', `${id} gets signals from the board but its gnd is not on the board's GND net (common ground)`);
+
+    // voltage on the rail it hangs from
+    const v = Number(c.power && c.power.v);
+    for (const k of mine) {
+      if (!VCC.test(sigOf(k)) || !board) continue;
+      const o = other(k);
+      const pp = o.startsWith('board.') && board.power_pins[o.slice(6)];
+      if (pp && RAIL_V[pp.rail] && Number.isFinite(v) && Math.abs(v - RAIL_V[pp.rail]) > 0.5) {
+        add('FAIL', `${id} needs ${v} V but its ${sigOf(k)} is on the board's ${o.slice(6)} pin (${RAIL_V[pp.rail]} V)`);
+      }
+      if (o.startsWith('supply.') && Number.isFinite(v) && p.power.source.v && Math.abs(v - Number(p.power.source.v)) > 0.5 && str(c.type) !== 'driver' && str(c.type) !== 'power') {
+        add('WARNING', `${id} needs ${v} V, the supply gives ${p.power.source.v} V: is there a regulator in between?`);
+      }
+    }
+    // inductive loads straight on a signal pin
+    if (INDUCTIVE.includes(str(c.type)) && mine.some((k) => k.how === 'pin' && !(board && board.power_pins[k.a.slice(6)]))) {
+      add('FAIL', `${id} is a ${c.type} on a board signal pin: a pin gives ~20 mA and the coil kicks back. Use a driver/MOSFET (+ flyback diode) or a relay module`);
+    }
+    if (str(c.type) === 'button' && !c.pullup) add('WARNING', `${id}: button with no pullup (internal | external): the input floats when not pressed`);
+    if (str(c.type) === 'led' && !c.resistor_ohm) add('WARNING', `${id}: LED with no resistor_ohm: a bare LED on a pin burns the LED or the pin`);
+  }
+
+  // I2C addresses
+  const addrs = new Map();
+  for (const c of comps) for (const a of list(c.i2c_addr).map(hexAddr)) {
+    if (addrs.has(a)) add('FAIL', `${c.id} and ${addrs.get(a)} both use I2C address ${a}`);
+    else addrs.set(a, c.id);
+  }
+  if (!R.some((r) => r.level === 'FAIL') && conns.length) R.push({ level: 'PASS', area: 'wiring', msg: `${conns.length} connections: grounds common, no coil on a pin, rail voltages match` });
+  return R;
+}
+
+const hexAddr = (x) => (typeof x === 'number' ? '0x' + x.toString(16).toUpperCase().padStart(2, '0') : str(x).replace(/^0x/i, '0x').toUpperCase().replace(/^0X/, '0x'));
+
+// Wiring table + Mermaid diagram, for WIRING.md
+export function wiringDoc(p) {
+  const conns = connections(p);
+  const comps = list(p.components);
+  const ctrl = str(p.controller);
+  const label = (end) => {
+    const [cid, sig] = end.split('.');
+    if (cid === 'board') return `${ctrl || 'board'} ${sig}`;
+    return `${cid} ${sig}`;
+  };
+  const lines = [`# Wiring: ${str(p.title) || p.project}`, '',
+    `Generated by projkit from project.yaml (${str(p.updated)}). Regenerate, don't edit.`, ''];
+  for (const c of comps) {
+    if (str(c.id) === ctrl) continue;
+    const mine = conns.filter((k) => k.a.split('.')[0] === c.id || k.b.split('.')[0] === c.id);
+    lines.push(`## ${c.id}: ${str(c.part)}${Number(c.qty) > 1 ? ` (×${c.qty})` : ''}`, '');
+    if (!mine.length) { lines.push('_Not wired yet._', ''); continue; }
+    lines.push('| Pin on the part | Connects to | Note |', '|---|---|---|');
+    for (const k of mine) {
+      const [me, other] = k.a.split('.')[0] === c.id ? [k.a, k.b] : [k.b, k.a];
+      lines.push(`| ${me.split('.')[1]} | ${label(other)} | ${k.note || ''} |`);
+    }
+    const extra = [c.pullup && `pull-up: ${c.pullup}`, c.resistor_ohm && `resistor: ${c.resistor_ohm} Ω`, list(c.i2c_addr).length && `I2C ${list(c.i2c_addr).map(hexAddr).join(', ')}`].filter(Boolean);
+    lines.push('', ...(extra.length ? [extra.join(' · '), ''] : []));
+  }
+  // diagram: one box per component (+ board, supply), one edge per connection
+  const id = (s) => s.replace(/[^A-Za-z0-9_]/g, '_');
+  const boxes = new Set();
+  const pairs = new Map(); // one line per pair of boxes, all their wires in the label
+  const box = (end) => { const cid = end.split('.')[0]; const b = cid === 'board' ? (ctrl || 'board') : cid; boxes.add(b); return b; };
+  for (const k of conns) {
+    const A = box(k.a), B = box(k.b), key = `${A}|${B}`;
+    if (!pairs.has(key)) pairs.set(key, []);
+    pairs.get(key).push(`${k.a.split('.')[1]}→${k.b.split('.')[1]}`);
+  }
+  const edges = [...pairs].map(([key, ls]) => { const [A, B] = key.split('|'); return `  ${id(A)} ---|"${ls.join(', ')}"| ${id(B)}`; });
+  if (edges.length) {
+    const name = (b) => { const c = comps.find((x) => str(x.id) === b); return b === 'supply' ? str(p.power && p.power.source && p.power.source.part) || 'supply' : c ? `${b}: ${str(c.part)}` : b; };
+    lines.push('## Diagram', '', '```mermaid', 'flowchart LR', ...[...boxes].map((b) => `  ${id(b)}["${name(b).replace(/"/g, "'")}"]`), ...edges, '```', '');
+  }
+  return lines.join('\n');
 }
 
 function phaseAtLeast(phase, ph) { return PHASES.indexOf(phase) >= PHASES.indexOf(ph); }
@@ -469,6 +614,12 @@ ${note}`);
     if (stock) { const buy = Object.entries(stock).filter(([, v]) => v !== 'OK'); console.log(buy.length ? `not in stock: ${buy.map(([k, v]) => `${k} (${v})`).join(', ')}` : 'everything is in stock'); }
     if (res.next.length) console.log(`next: ${res.next.join(', ')}`);
     process.exit(res.results.some((r) => r.level === 'FAIL') ? 1 : 0);
+  } else if (cmd === 'wiring') {
+    const [f, p] = readOr2(arg);
+    const doc = wiringDoc(p);
+    const w = flag('--write');
+    if (w) { const out = typeof w === 'string' ? path.resolve(w) : path.join(path.dirname(f), 'WIRING.md'); fs.writeFileSync(out, doc); console.log(`wrote ${out}`); }
+    else process.stdout.write(doc);
   } else if (cmd === 'needs') {
     const [, p] = readOr2(arg);
     const out = yaml.dump(toNeeds(p), { lineWidth: 120 });
@@ -478,7 +629,7 @@ ${note}`);
   } else if (cmd === 'boards') {
     for (const id of boardIds()) { const b = loadBoard(id); console.log(`${id.padEnd(16)} ${b.fqbn.padEnd(20)} ${b.logic_v} V  ${b.name}`); }
   } else {
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 11).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 12).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(cmd ? 2 : 0);
   }
 }

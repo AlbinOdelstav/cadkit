@@ -79,8 +79,8 @@ and say why.
 ## 5. Hand over
 
 End with a short summary in chat: the chosen concept, the hard part, what is
-still open, and the **next step** (usually: choose components and wiring;
-with many parts, `/plan` gives the order to buy, print and build in).
+still open, and the **next step** (usually `/electronics`: components, power
+and wiring; with many parts, `/plan` gives the order to buy, print and build in).
 
 ## Never
 

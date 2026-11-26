@@ -17,7 +17,8 @@ Status: it works on one Windows setup (FreeCAD 1.1, Bambu Lab P1S, PLA). See
 | Skill / hook | What it does |
 |---|---|
 | `idea` | Turns a loose idea into testable requirements, 2-3 concepts with the hard part named, and a `project.yaml` |
-| `project` | Keeps `project.yaml` current and checks it: pin clashes, pins without PWM/analog/I2C, overloaded 5V/3V3 board pins, power budget, 3.3 V vs 5 V logic, phase gates |
+| `electronics` | Picks a part per function (owned first), datasheet currents, power design (drivers, common ground, regulators), pins, and a checked `WIRING.md` with tables and a diagram |
+| `project` | Keeps `project.yaml` current and checks it: pin clashes, pins without PWM/analog/I2C, overloaded 5V/3V3 board pins, power budget, 3.3 V vs 5 V logic, common ground, coils on signal pins, I2C address clashes, phase gates |
 | `plan` | A prioritised build plan: buy (what the inventory lacks), test on a breadboard, print in batches, solder, assemble, flash, with dependencies and "what's next" |
 | `cad-validation` | Buildability rules for the designer, plus **cadkit**: walls, mesh, export, screws along their axes, fits, clashes, bought-part clearances, access paths, motion sweeps |
 | `cad-review` | A strict pre-print review that starts from the cadkit report |
@@ -107,6 +108,7 @@ node <projkit>/projkit.mjs new    path/to/my-project     # from the template
 node <projkit>/projkit.mjs check  path/to/my-project     # FAIL / WARNING / NOT TESTED / PASS + gate
 node <projkit>/projkit.mjs status path/to/my-project     # one line
 node <projkit>/projkit.mjs plan   path/to/my-project     # build steps in order, what to buy, what's next
+node <projkit>/projkit.mjs wiring path/to/my-project --write  # WIRING.md: table per part + Mermaid diagram
 node <projkit>/projkit.mjs needs  path/to/my-project     # components as an inventory project file
 ```
 
@@ -132,7 +134,7 @@ profile.
 
 ```text
 node skills/cad-validation/cadkit/tests/run_tests.mjs
-node skills/project/projkit/tests/run_tests.mjs     # project file: pins, power, gates, plan order
+node skills/project/projkit/tests/run_tests.mjs     # project file: pins, power, wiring rules, gates, plan order
 ```
 
 This builds an Arduino Uno enclosure in 19 variants, each with one seeded
