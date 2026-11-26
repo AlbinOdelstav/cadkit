@@ -19,6 +19,12 @@ t('pins.h: no power pins', !/PIN_\w+_VCC|PIN_\w+_GND/.test(h));
 t('pins.h: I2C listed, not as constants', /oled\.sda on A4/.test(h) && !/PIN_OLED_SDA/.test(h));
 t('pins.h: I2C addresses in hex', /I2C_ADDR_OLED = 0x3C;/.test(h));
 t('pins.h: baud', /SERIAL_BAUD = 115200;/.test(h));
+{
+  const { loadBoard } = await import('../../../project/projkit/projkit.mjs');
+  const esp = { p: { project: 'x', pins: [{ pin: 'IO4', to: 'led.k' }, { pin: 'G23', to: 'btn.a' }] }, board: loadBoard('esp32-devkit-v1'), baud: 115200 };
+  const eh = pinsHeader(esp);
+  t('pins.h: ESP32 pin names (IO4, G23) become GPIO numbers', /PIN_LED_K = 4;/.test(eh) && /PIN_BTN_A = 23;/.test(eh));
+}
 
 const orig = fs.readFileSync(INO, 'utf8');
 try {

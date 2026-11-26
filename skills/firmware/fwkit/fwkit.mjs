@@ -54,7 +54,7 @@ export function pinsHeader(P) {
     `// Project: ${str(p.title) || p.project}  Board: ${board ? board.id : 'unknown'}`, '#pragma once', '#include <Arduino.h>', ''];
   const i2c = [];
   for (const e of list(p.pins)) {
-    const pin = normPin(e.pin), to = str(e.to);
+    const pin = normPin(e.pin, board), to = str(e.to);
     if (board && board.power_pins && board.power_pins[pin]) continue;
     if (['GND', '5V', '3V3', 'VIN'].includes(pin)) continue;
     const [cid, sig] = to.split('.');
